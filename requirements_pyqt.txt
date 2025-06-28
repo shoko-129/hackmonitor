@@ -1,0 +1,52 @@
+# PyQt5/PySide6 Hackathon Monitor Requirements
+# Modern GUI version with enhanced features
+
+# Core backend dependencies (same as crossplatform version)
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+lxml>=4.9.0
+openpyxl>=3.1.0
+schedule>=1.2.0
+selenium>=4.15.0
+webdriver-manager>=4.0.0
+python-dateutil>=2.8.0
+configparser>=5.0.0
+Pillow>=10.0.0
+
+# GUI Framework - Choose ONE of the following options:
+
+# Option 1: PyQt5 (Recommended - more stable)
+PyQt5>=5.15.0
+PyQt5-Qt5>=5.15.0
+
+# Option 2: PySide6 (Alternative - newer, official Qt binding)
+# Uncomment the lines below and comment out PyQt5 lines above if you prefer PySide6
+# PySide6>=6.4.0
+
+# GUI Enhancement Libraries
+QDarkStyle>=3.1.0          # Dark theme support
+qtawesome>=1.2.0           # Font Awesome icons for Qt
+pyqtgraph>=0.13.0          # Advanced plotting and data visualization
+
+# Windows-specific notifications (same as before)
+win10toast>=0.9; sys_platform == "win32"
+pywin32>=307; sys_platform == "win32"
+
+# macOS-specific notifications  
+pync>=2.0.3; sys_platform == "darwin"
+
+# Linux-specific notifications
+plyer>=2.1.0; sys_platform == "linux"
+notify2>=0.3.1; sys_platform == "linux"
+
+# Additional utilities for enhanced GUI
+psutil>=5.9.0              # System monitoring
+matplotlib>=3.6.0          # Additional plotting capabilities
+pandas>=1.5.0              # Data manipulation for advanced features
+
+# Optional: System tray support
+pystray>=0.19.0            # System tray integration
+
+# Development and testing
+pytest>=7.0.0             # Testing framework
+pytest-qt>=4.2.0          # Qt-specific testing utilities

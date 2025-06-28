@@ -1,273 +1,302 @@
-# 🎯 Hackathon Monitor - Modern Cross-Platform Solution
+# 🎯 MLH Digital Hackathon Monitor - PyQt5 GUI
 
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
-[![Cross-Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-blue.svg)](https://github.com/Shiva-129/hackathon-monitor)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-
-A modern, cross-platform application that monitors popular hackathon platforms and sends notifications about new events. Choose from multiple interfaces: Web, Desktop App, Terminal, or Command Line.
+A modern, cross-platform PyQt5 GUI application specifically designed for monitoring **MLH Digital Only hackathons** and automatically saving them to Excel.
 
 ## ✨ Key Features
 
-- 🚀 **Auto-Startup**: Automatically starts when Windows boots (optional)
-- 🔍 **Background Monitoring**: Continuously scans DevPost, MLH, and Unstop platforms
-- 🔔 **Smart Notifications**: Windows notifications with **click-to-open Excel** functionality
-- 📊 **Excel Integration**: Automatically saves all hackathon data to organized spreadsheets
-- 🖥️ **Modern GUI**: Intuitive graphical interface with real-time progress tracking
-- ⏰ **Flexible Scheduling**: One-time scans or continuous 6-hour monitoring
-- �️ **Robust Scraping**: Chrome WebDriver-based scraping with error handling
-- 🎛️ **Easy Management**: Simple start/stop controls and configuration options
+- **🎯 MLH Digital Only Focus**: Exclusively scrapes MLH for "Digital Only" hackathons
+- **🖥️ Modern PyQt5 Interface**: Professional, native-looking GUI with tabbed interface
+- **📊 Interactive Data Management**: Sortable table view with export capabilities
+- **🔔 Smart Notifications**: Cross-platform notifications with system tray integration
+- **⚙️ Comprehensive Settings**: Easy configuration of monitoring preferences
+- **📈 Real-time Monitoring**: Live status updates and progress tracking
+- **💾 Excel Integration**: Automatic data export with clean MLH event URLs
+- **🎨 Modern Styling**: Light/dark themes with Font Awesome icons
+- **🔧 Background Operation**: System tray support for background monitoring
+- **🌍 Cross-Platform**: Works on Windows, macOS, and Linux
 
-## 🌐 Supported Platforms
+## 🌐 Platform Compatibility
 
-| Platform | Website | Features | Status |
-|----------|---------|----------|--------|
-| **DevPost** | [devpost.com/hackathons](https://devpost.com/hackathons) | Main hackathons page scraping | ✅ Active |
-| **MLH** | [mlh.io](https://mlh.io) | Major League Hacking events | ✅ Active |
-| **Unstop** | [unstop.com](https://unstop.com) | Competitions and hackathons | ✅ Active |
+| Platform | Status | Setup Method |
+|----------|--------|--------------|
+| **🪟 Windows 10/11** | ✅ Fully Supported | `setup_windows.bat` |
+| **🐧 Linux** | ✅ Fully Supported | `./launch_pyqt_gui.sh` |
+| **🍎 macOS** | ✅ Fully Supported | `./launch_pyqt_gui.sh` |
 
-## � Quick Start
+## 🚀 Quick Start
 
-### Prerequisites
-- **Windows 10/11**
-- **Python 3.8+**
-- **Chrome Browser** (for web scraping)
+### 🪟 **Windows Setup**
+```cmd
+# 1. Double-click to setup:
+setup_windows.bat
 
-### Installation
-
-#### **Option 1: One-Click Installer (Recommended)**
-
-1. **Download**: [`HackathonMonitor_v1.0.0_Installer.exe`](dist/HackathonMonitor_v1.0.0_Installer.exe) (11.2 MB)
-2. **Run**: Double-click the downloaded file
-3. **Enable Auto-Startup**: ✅ Check "Start automatically when Windows boots" (Recommended)
-4. **Install**: Follow the installer prompts
-5. **Automatic Operation**: Application starts on boot and monitors in background
-
-#### **Option 2: Manual Installation**
-
-1. **Clone or download** this repository:
-   ```bash
-   git clone https://github.com/Shiva-129/hackathon-monitor.git
-   cd hackathon-monitor-main
-   ```
-
-2. **Install dependencies**:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. **Run the application**:
-   ```bash
-   # Universal launcher (choose interface)
-   python hackathon_monitor_launcher.py
-
-   # Web interface (recommended)
-   python hackathon_monitor_web.py
-
-   # Command line interface
-   python hackathon_monitor_cli.py scrape
-   ```
-
-4. **Create desktop shortcuts** (optional):
-   ```bash
-   # Create shortcuts for easy access
-   python create_shortcuts.py
-
-   # Creates desktop shortcuts for:
-   # - Web Interface
-   # - Universal Launcher
-   # - CLI Interface
-   ```
-
-## �️ Using the Application
-
-### GUI Interface
-
-The **Hackathon Monitor GUI** provides an easy-to-use interface:
-
-1. **Launch the GUI**: `python hackathon_monitor_gui.py`
-2. **Choose your monitoring mode**:
-   - **🔍 Scrape Once**: Single scan of all platforms
-   - **⏰ Start 6-Hour Monitoring**: Continuous monitoring every 6 hours
-3. **Monitor progress**: Real-time status updates and logs
-4. **Access data**: Click **📊 Open Excel** to view collected hackathons
-5. **Test notifications**: Use **🔔 Test Notification** to verify setup
-
-### Key GUI Features
-
-- **Real-time Progress**: See scraping progress with platform-specific updates
-- **Live Logs**: Monitor application activity in the log window
-- **Easy Controls**: Start/stop monitoring with simple buttons
-- **Status Indicators**: Visual feedback on application state
-- **Quick Access**: Direct buttons to open Excel and test notifications
-
-### Command Line Usage
-
-For advanced users or automation:
-
-```bash
-# Run a single scraping cycle
-python hackathon_monitor.py
-
-# Run with specific configuration
-python hackathon_monitor.py --config custom_config.ini
-
-# Test notifications
-python manage_service.py test
+# 2. Double-click to run:
+launch_pyqt_gui.bat
 ```
+
+### 🐧 **Linux/macOS Setup**
+```bash
+# 1. Run setup script
+chmod +x setup_system.sh
+./setup_system.sh
+
+# 2. Run application
+./launch_pyqt_gui.sh
+```
+
+#### Option 2: Manual Installation
+```bash
+# Install dependencies
+pip install -r requirements_pyqt.txt
+
+# Run the application
+python3 hackathon_monitor_pyqt.py
+```
+
+#### Option 3: Virtual Environment
+```bash
+# Create virtual environment
+python3 -m venv venv_pyqt
+source venv_pyqt/bin/activate  # Linux/macOS
+# or
+venv_pyqt\Scripts\activate     # Windows
+
+# Install dependencies
+pip install -r requirements_pyqt.txt
+
+# Run the application
+python hackathon_monitor_pyqt.py
+```
+
+## 🖥️ GUI Interface Overview
+
+### Monitor Tab
+- **Quick Statistics**: Total hackathons, new today, monitoring status
+- **Control Buttons**:
+  - 🔍 **Scrape Once**: Run single scraping cycle
+  - ▶️ **Start Monitoring**: Begin continuous monitoring
+  - ⏹️ **Stop Monitoring**: Stop background monitoring
+  - 🔔 **Test Notification**: Verify notification system
+- **Activity Log**: Real-time activity feed with timestamps
+- **Progress Tracking**: Visual progress indicators during operations
+
+### Data Tab
+- **Interactive Table**: View all hackathon data with sorting and filtering
+- **Export Functions**:
+  - 🔄 **Refresh Data**: Update table with latest data
+  - 💾 **Export Excel**: Save data to custom Excel file
+  - 📊 **Open Excel**: Open existing Excel file
+- **Column Management**: Resizable columns with auto-sizing
+
+### Settings Tab
+- **Monitoring Configuration**:
+  - Check interval (1-24 hours)
+  - Enable/disable notifications
+- **Platform Toggles**:
+  - Devpost monitoring
+  - MLH monitoring
+  - Unstop monitoring
+- **Appearance Options**:
+  - Light/Dark theme selection
+  - System tray preferences
+- **System Information**: Platform and version details
+
+### Logs Tab
+- **Log Viewer**: Syntax-highlighted log display
+- **Log Management**:
+  - 🔄 **Refresh**: Load latest logs from file
+  - 🗑️ **Clear**: Clear current log display
+  - 💾 **Save**: Export logs to text file
+- **Real-time Updates**: Live log streaming during operations
 
 ## ⚙️ Configuration
 
-The application uses `config.ini` for customization. Here are the key settings:
+### Configuration Files
+- **`config.ini`**: Backend monitoring configuration
+- **GUI Settings**: Automatically saved PyQt5 preferences
+- **Log Files**: Located in `logs/hackathon_monitor.log`
 
+### Default Settings
 ```ini
 [SETTINGS]
-# Excel file location
+scraping_interval = 6           # Hours between checks
 excel_file = hackathons_data.xlsx
-
-# Enable/disable notifications
 notifications_enabled = true
 
 [PLATFORMS]
-# Enable/disable specific platforms
-devpost = true
-mlh = true
-unstop = true
+devpost = true                  # Enable Devpost monitoring
+mlh = true                      # Enable MLH monitoring
+unstop = true                   # Enable Unstop monitoring
+
+[FILTERS]
+min_days_notice = 1
+max_days_advance = 90
+keywords = AI,ML,blockchain,web,mobile,hackathon
 ```
 
-### Platform Configuration
+## 📊 Data Management
 
-- **DevPost**: Scrapes the main hackathons page (devpost.com/hackathons)
-- **MLH**: Monitors Major League Hacking events
-- **Unstop**: Tracks competitions and hackathons
-
-You can enable/disable any platform by setting its value to `true` or `false` in the config file.
-
-## 📊 Data Storage & Notifications
-
-### Excel Integration
-
-All hackathon data is automatically saved to `hackathons_data.xlsx` with these columns:
+### Excel Output
+The application automatically creates and manages Excel files with:
 
 | Column | Description |
 |--------|-------------|
-| **Name** | Hackathon title |
-| **Platform** | Source platform (DevPost, MLH, Unstop) |
-| **URL** | Direct link to hackathon page |
-| **Deadline** | Registration/submission deadline |
-| **Tags** | Categories and technologies |
-| **Scraped At** | When the data was collected |
+| Name | Hackathon name |
+| Platform | Source platform (Devpost, MLH, Unstop) |
+| Link | Direct link to hackathon page |
+| Start Date | Event start date |
+| Tags | Relevant categories and tags |
+| Scraped At | Data collection timestamp |
+| Status | New/Updated status |
 
-### Smart Notifications
+### Export Features
+- **Custom Export**: Save data to any location
+- **Automatic Backup**: Timestamped export files
+- **Format Support**: Excel (.xlsx) format
+- **Data Integrity**: Preserves all formatting and data
 
-- **🔔 Instant Alerts**: Get notified immediately when new hackathons are found
-- **📱 Click-to-Open**: Click notifications to automatically open the Excel file
-- **📋 Detailed Info**: Notifications show hackathon names and total counts
-- **🔄 Multiple Methods**: Uses Windows Toast, PowerShell, and fallback notifications
+## 🔔 Notification System
 
-## 🛠️ Advanced Usage
+### Platform Support
+- **Windows**: Native Windows 10/11 toast notifications
+- **macOS**: Native notification center integration
+- **Linux**: notify-send and desktop notifications
 
-### Windows Service (Optional)
+### Notification Features
+- **New Hackathon Alerts**: Immediate notifications for new events
+- **Summary Reports**: Periodic monitoring status updates
+- **System Tray Integration**: Notifications from background operation
+- **Customizable**: Enable/disable in settings
 
-For background operation, you can install as a Windows service:
+## 🛠️ Advanced Features
 
+### System Tray Integration
+- **Background Operation**: Continue monitoring when window is closed
+- **Quick Access**: Right-click menu for common actions
+- **Status Indicators**: Visual monitoring status in system tray
+
+### Multi-threading
+- **Non-blocking UI**: Scraping operations don't freeze the interface
+- **Background Monitoring**: Continuous operation without UI interference
+- **Progress Tracking**: Real-time updates during long operations
+
+### Error Handling
+- **Graceful Degradation**: Continues operation when optional features fail
+- **User Feedback**: Clear error messages and recovery suggestions
+- **Logging**: Comprehensive error logging for troubleshooting
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+#### PyQt5 Installation Issues
 ```bash
-# Install service (requires admin privileges)
-python manage_service.py install
+# Try alternative installation
+pip install PyQt5-Qt5 PyQt5-sip PyQt5
 
-# Start/stop service
-python manage_service.py start
-python manage_service.py stop
-
-# Remove service
-python manage_service.py remove
+# Or use conda
+conda install pyqt
 ```
+
+#### Missing System Dependencies (Linux)
+```bash
+sudo apt install python3-dev python3-pip
+sudo apt install qt5-default libqt5widgets5
+sudo apt install libnotify-bin
+```
+
+#### Notification Issues
+```bash
+# Linux: Test notifications
+notify-send "Test" "Notification working"
+
+# Install notification daemon if needed
+sudo apt install notification-daemon
+```
+
+### Testing Installation
+```bash
+# Run the test suite
+python3 test_pyqt_gui.py
+```
+
+### Debug Mode
+Check the Logs tab in the GUI or view `logs/hackathon_monitor.log` for detailed information.
 
 ## 📁 Project Structure
 
 ```
-hackathon-monitor-main/
-├── hackathon_monitor.py         # Main monitoring script
-├── hackathon_monitor_gui.py     # GUI application
-├── config.ini                  # Configuration settings
-├── requirements.txt            # Python dependencies
-├── installer.py               # Installation utilities
-├── manage_service.py          # Service management
-├── hackathons_data.xlsx       # Generated data file
-├── notifications/             # Notification system
+hackathon-monitor-pyqt/
+├── hackathon_monitor_pyqt.py      # Main PyQt5 GUI application
+├── hackathon_monitor_crossplatform.py  # Backend monitoring logic
+├── requirements_pyqt.txt          # PyQt5 dependencies
+├── setup_pyqt_gui.py             # Automated setup script
+├── test_pyqt_gui.py              # Test suite
+├── PYQT_SETUP_GUIDE.md           # Detailed setup guide
+├── config.ini                    # Configuration file
+├── logo.png                      # Application icon
+├── scrapers/                     # Web scraping modules
 │   ├── __init__.py
-│   └── notifier.py           # Windows notifications with click-to-open
-├── scrapers/                 # Web scraping modules
+│   └── hackathon_scraper.py
+├── storage/                      # Data management
 │   ├── __init__.py
-│   └── hackathon_scraper.py  # Platform scrapers
-├── storage/                  # Data management
+│   └── excel_manager.py
+├── notifications/                # Notification system
 │   ├── __init__.py
-│   └── excel_manager.py      # Excel file operations
-└── service/                  # Windows service support
-    ├── __init__.py
-    └── windows_service.py
+│   └── notifier.py
+└── logs/                        # Log files (created at runtime)
+    └── hackathon_monitor.log
 ```
 
-## 🔧 Troubleshooting
+## 🔄 Updates and Maintenance
 
-### Common Issues & Solutions
-
-| Issue | Solution |
-|-------|----------|
-| **Notifications not appearing** | Check Windows notification settings; try test notification |
-| **Excel file won't open** | Ensure Excel is installed and .xlsx files are associated |
-| **Chrome driver errors** | Chrome browser must be installed; driver auto-downloads |
-| **Scraping failures** | Check internet connection; some sites may be temporarily down |
-| **Permission errors** | Run as administrator for service installation |
-
-### Testing Your Setup
-
+### Updating Dependencies
 ```bash
-# Test notifications (should show a test notification)
-python manage_service.py test
+# Activate virtual environment (if used)
+source venv_pyqt/bin/activate
 
-# Test Excel opening (should open the data file)
-python -c "import os; os.startfile('hackathons_data.xlsx')"
-
-# Test single scraping cycle
-python hackathon_monitor_gui.py
-# Then click "🔍 Scrape Once" button
+# Update packages
+pip install --upgrade -r requirements_pyqt.txt
 ```
 
-### Debug Information
+### Backup Data
+```bash
+# Backup Excel data
+cp hackathons_data.xlsx backup_$(date +%Y%m%d).xlsx
 
-- **Logs**: Check console output in GUI for real-time debugging
-- **Excel File**: Verify `hackathons_data.xlsx` is created and populated
-- **Config**: Ensure `config.ini` has correct platform settings
-- **Dependencies**: Run `pip list` to verify all packages are installed
-
-## 🚀 Tips for Best Results
-
-1. **First Run**: Use "🔍 Scrape Once" to test and populate initial data
-2. **Notifications**: Test notifications before starting continuous monitoring
-3. **Excel**: Keep the Excel file closed during scraping to avoid conflicts
-4. **Chrome**: Ensure Chrome browser is updated to latest version
-5. **Internet**: Stable internet connection improves scraping reliability
-
-## 📝 License
-
-This project is open source and available under the MIT License. Feel free to modify and distribute.
-
-## 🤝 Contributing
-
-Contributions are welcome! Areas for improvement:
-- Additional hackathon platforms
-- Enhanced notification features
-- Better error handling
-- UI/UX improvements
+# Backup configuration
+cp config.ini config_backup.ini
+```
 
 ## 📞 Support
 
-If you encounter issues:
-1. **Check the GUI logs** for error messages
-2. **Verify your configuration** in `config.ini`
-3. **Test individual components** using the troubleshooting commands above
-4. **Ensure all dependencies** are properly installed
+### Getting Help
+1. **Check Logs**: Use the Logs tab to identify issues
+2. **Test Components**: Use the "Test Notification" button
+3. **Verify Settings**: Check configuration in Settings tab
+4. **Read Documentation**: Refer to `PYQT_SETUP_GUIDE.md`
+
+### Reporting Issues
+Include the following information:
+- Operating system and version
+- Python version (`python --version`)
+- PyQt5 version (`pip show PyQt5`)
+- Error messages from logs
+- Steps to reproduce the issue
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- **PyQt5**: For the excellent GUI framework
+- **Hackathon Platforms**: For providing accessible data
+- **Open Source Community**: For the amazing libraries used
+- **Contributors**: Everyone who helps improve this project
 
 ---
 
-**Happy Hackathon Hunting! 🎯**
+**🎯 Never miss a hackathon opportunity again!**
+
+*Built with ❤️ using Python and PyQt5*

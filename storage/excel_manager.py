@@ -15,8 +15,7 @@ class ExcelManager:
         self.excel_file = Path(excel_file_path)
         self.logger = logging.getLogger(__name__)
         self.headers = [
-            'Name', 'Platform', 'Link', 'Start Date', 
-            'Tags', 'Scraped At', 'Status'
+            'Name', 'Platform', 'Link', 'Date', 'Event Type', 'Scraped At'
         ]
         self.ensure_excel_file()
         
@@ -41,8 +40,8 @@ class ExcelManager:
                 cell.fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
                 cell.alignment = Alignment(horizontal="center")
                 
-            # Set column widths
-            column_widths = [40, 15, 50, 15, 30, 20, 15]
+            # Set column widths for new structure
+            column_widths = [40, 15, 60, 20, 15, 20]  # Name, Platform, Link, Date, Event Type, Scraped At
             for col, width in enumerate(column_widths, 1):
                 ws.column_dimensions[ws.cell(row=1, column=col).column_letter].width = width
                 
@@ -90,10 +89,9 @@ class ExcelManager:
                         'name': row[0],
                         'platform': row[1],
                         'link': row[2],
-                        'start_date': row[3],
-                        'tags': row[4],
-                        'scraped_at': row[5],
-                        'status': row[6] if len(row) > 6 else 'New'
+                        'date': row[3],
+                        'event_type': row[4],
+                        'scraped_at': row[5]
                     }
                     hackathons.append(hackathon)
                     
@@ -115,11 +113,10 @@ class ExcelManager:
                 ws.cell(row=next_row, column=1, value=hackathon.get('name', ''))
                 ws.cell(row=next_row, column=2, value=hackathon.get('platform', ''))
                 ws.cell(row=next_row, column=3, value=hackathon.get('link', ''))
-                ws.cell(row=next_row, column=4, value=hackathon.get('start_date', ''))
-                ws.cell(row=next_row, column=5, value=hackathon.get('tags', ''))
+                ws.cell(row=next_row, column=4, value=hackathon.get('date', ''))
+                ws.cell(row=next_row, column=5, value=hackathon.get('event_type', ''))
                 ws.cell(row=next_row, column=6, value=hackathon.get('scraped_at', ''))
-                ws.cell(row=next_row, column=7, value='New')
-                
+
                 next_row += 1
                 
             wb.save(self.excel_file)
