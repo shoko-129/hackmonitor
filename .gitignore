@@ -166,6 +166,9 @@ tmp/
 
 # Hackathon Monitor specific
 hackathons_data.xlsx
+*test*.xlsx
+*final*.xlsx
+*sample*.xlsx
 *.csv
 node_modules/
 assets/

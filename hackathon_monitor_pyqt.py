@@ -330,14 +330,20 @@ class ModernHackathonMonitorGUI(QMainWindow):
         self.data_table.setSortingEnabled(True)
 
         # Set table headers
-        headers = ['Name', 'Platform', 'Start Date', 'Tags', 'Scraped At', 'Status']
+        headers = ['Name', 'Platform', 'Date', 'Days Left', 'Link', 'Tags', 'Prize', 'Status']
         self.data_table.setColumnCount(len(headers))
         self.data_table.setHorizontalHeaderLabels(headers)
 
         # Configure table appearance
         header = self.data_table.horizontalHeader()
         header.setSectionResizeMode(0, QHeaderView.Stretch)  # Name column stretches
-        header.setSectionResizeMode(1, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(1, QHeaderView.ResizeToContents)  # Platform
+        header.setSectionResizeMode(2, QHeaderView.ResizeToContents)  # Date
+        header.setSectionResizeMode(3, QHeaderView.ResizeToContents)  # Days Left
+        header.setSectionResizeMode(4, QHeaderView.ResizeToContents)  # Link
+        header.setSectionResizeMode(5, QHeaderView.ResizeToContents)  # Tags
+        header.setSectionResizeMode(6, QHeaderView.ResizeToContents)  # Prize
+        header.setSectionResizeMode(7, QHeaderView.ResizeToContents)  # Status
         header.setSectionResizeMode(2, QHeaderView.ResizeToContents)
         header.setSectionResizeMode(3, QHeaderView.Stretch)
         header.setSectionResizeMode(4, QHeaderView.ResizeToContents)
@@ -734,7 +740,7 @@ class ModernHackathonMonitorGUI(QMainWindow):
             # Count today's hackathons
             today = datetime.now().strftime('%Y-%m-%d')
             new_today = sum(1 for h in existing_hackathons
-                          if h.get('scraped_at', '').startswith(today))
+                          if h.get('scraped_at', '') and str(h.get('scraped_at', '')).startswith(today))
 
             self.total_hackathons_label.setText(f"Total: {total_count}")
             self.new_today_label.setText(f"New Today: {new_today}")
@@ -750,12 +756,29 @@ class ModernHackathonMonitorGUI(QMainWindow):
             self.data_table.setRowCount(len(hackathons))
 
             for row, hackathon in enumerate(hackathons):
+                # Name
                 self.data_table.setItem(row, 0, QTableWidgetItem(hackathon.get('name', '')))
+                # Platform
                 self.data_table.setItem(row, 1, QTableWidgetItem(hackathon.get('platform', '')))
-                self.data_table.setItem(row, 2, QTableWidgetItem(hackathon.get('start_date', '')))
-                self.data_table.setItem(row, 3, QTableWidgetItem(hackathon.get('tags', '')))
-                self.data_table.setItem(row, 4, QTableWidgetItem(hackathon.get('scraped_at', '')))
-                self.data_table.setItem(row, 5, QTableWidgetItem(hackathon.get('status', 'New')))
+                # Date (use submission_period if available, otherwise date)
+                date_info = hackathon.get('submission_period', '') or hackathon.get('date', '')
+                self.data_table.setItem(row, 2, QTableWidgetItem(date_info))
+                # Days Left
+                days_left = hackathon.get('days_left', '')
+                self.data_table.setItem(row, 3, QTableWidgetItem(days_left))
+                # Link
+                link = hackathon.get('link', '')
+                if link and len(link) > 50:  # Truncate long links for display
+                    link_display = link[:47] + "..."
+                else:
+                    link_display = link
+                self.data_table.setItem(row, 4, QTableWidgetItem(link_display))
+                # Tags
+                self.data_table.setItem(row, 5, QTableWidgetItem(hackathon.get('tags', '')))
+                # Prize
+                self.data_table.setItem(row, 6, QTableWidgetItem(hackathon.get('prize', '')))
+                # Status
+                self.data_table.setItem(row, 7, QTableWidgetItem(hackathon.get('status', 'New')))
 
             self.log_activity(f"Data table refreshed with {len(hackathons)} hackathons")
 

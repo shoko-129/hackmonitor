@@ -60,21 +60,35 @@ class HackathonScraper:
 
 
     def scrape_all_platforms(self, config, existing_hackathons=None):
-        """Scrape MLH platform only for Digital Only events"""
+        """Scrape MLH and Devpost platforms for upcoming hackathons"""
         if existing_hackathons is None:
             existing_hackathons = []
 
         all_hackathons = []
         existing_names = {h.get('name', '').lower() for h in existing_hackathons}
 
-        # Only scrape MLH for Digital Only events
+        # Scrape MLH for Digital Only events
         self.logger.info("Scraping MLH for Digital Only events...")
         mlh_hackathons = self.scrape_mlh()
         new_mlh = [h for h in mlh_hackathons if h.get('name', '').lower() not in existing_names]
         all_hackathons.extend(new_mlh)
         self.logger.info(f"Found {len(new_mlh)} new Digital Only hackathons from MLH")
 
-        self.logger.info(f"Total Digital Only hackathons found: {len(all_hackathons)}")
+        # Scrape Devpost for upcoming online hackathons
+        self.logger.info("Scraping Devpost for upcoming online hackathons...")
+        devpost_hackathons = self.scrape_devpost()
+        new_devpost = [h for h in devpost_hackathons if h.get('name', '').lower() not in existing_names]
+        all_hackathons.extend(new_devpost)
+        self.logger.info(f"Found {len(new_devpost)} new upcoming hackathons from Devpost")
+
+        # Scrape Unstop for upcoming unpaid hackathons
+        self.logger.info("Scraping Unstop for upcoming unpaid hackathons...")
+        unstop_hackathons = self.scrape_unstop()
+        new_unstop = [h for h in unstop_hackathons if h.get('name', '').lower() not in existing_names]
+        all_hackathons.extend(new_unstop)
+        self.logger.info(f"Found {len(new_unstop)} new upcoming hackathons from Unstop")
+
+        self.logger.info(f"Total upcoming hackathons found: {len(all_hackathons)}")
         return all_hackathons
 
     def scrape_mlh(self):
@@ -217,12 +231,29 @@ class HackathonScraper:
 
             location = ', '.join(location_parts) if location_parts else 'Online'
 
+            # Calculate days left for MLH events
+            days_left = ''
+            if start_date:
+                try:
+                    event_start = datetime.fromisoformat(start_date)
+                    current_time = datetime.now()
+                    days_diff = (event_start.date() - current_time.date()).days
+                    if days_diff > 0:
+                        days_left = f"{days_diff} days left"
+                    elif days_diff == 0:
+                        days_left = "Today"
+                    else:
+                        days_left = "Started"
+                except:
+                    days_left = "Date TBD"
+
             # Create data structure for digital-only hackathons
             hackathon_data = {
                 'name': name,
                 'platform': 'MLH',
                 'link': link,
                 'date': date_text,  # Human-readable date (e.g., "Jul 4th - 10th")
+                'days_left': days_left,  # Calculated days left
                 'start_date': start_date,  # ISO format for sorting
                 'end_date': end_date,
                 'event_type': event_type,  # "Digital Only"
@@ -237,7 +268,378 @@ class HackathonScraper:
             self.logger.error(f"Error parsing MLH event: {e}")
             return None
 
+    def scrape_devpost(self):
+        """Scrape Devpost for upcoming online hackathons"""
+        hackathons = []
+        driver = None
 
+        try:
+            url = "https://devpost.com/hackathons?challenge_type[]=online&open_to[]=public&order_by=prize-amount&status[]=upcoming&status[]=open"
+            self.logger.info(f"Scraping Devpost: {url}")
+
+            driver = self.get_webdriver()
+            if not driver:
+                self.logger.error("Could not initialize WebDriver for Devpost")
+                return self.create_sample_devpost_hackathons()
+
+            driver.get(url)
+            time.sleep(5)  # Wait for page to load
+
+            # Wait for hackathon tiles to load
+            try:
+                WebDriverWait(driver, 10).until(
+                    EC.presence_of_element_located((By.CLASS_NAME, "hackathon-tile"))
+                )
+            except:
+                self.logger.warning("Hackathon tiles not found, page might not have loaded properly")
+
+            # Get page source and parse with BeautifulSoup
+            soup = BeautifulSoup(driver.page_source, 'html.parser')
+
+            # Find all hackathon tiles
+            hackathon_tiles = soup.find_all('div', class_='hackathon-tile')
+            self.logger.info(f"Found {len(hackathon_tiles)} hackathon tiles")
+
+            for tile in hackathon_tiles:
+                try:
+                    hackathon_data = self.parse_devpost_hackathon(tile)
+                    if hackathon_data:
+                        hackathons.append(hackathon_data)
+                        self.logger.debug(f"Parsed Devpost hackathon: {hackathon_data['name']}")
+                except Exception as e:
+                    self.logger.warning(f"Error parsing Devpost hackathon: {e}")
+                    continue
+
+            self.logger.info(f"Successfully scraped {len(hackathons)} hackathons from Devpost")
+
+        except Exception as e:
+            self.logger.error(f"Error scraping Devpost: {e}")
+            return self.create_sample_devpost_hackathons()
+
+        finally:
+            if driver:
+                driver.quit()
+
+        return hackathons
+
+    def parse_devpost_hackathon(self, tile):
+        """Parse individual Devpost hackathon tile"""
+        try:
+            # Extract hackathon name from h3
+            name_element = tile.find('h3')
+            name = name_element.get_text(strip=True) if name_element else 'Unknown Hackathon'
+
+            # Extract link from tile-anchor - get the href attribute
+            link_element = tile.find('a', class_='tile-anchor')
+            link = ''
+            if link_element:
+                href = link_element.get('href', '')
+                if href:
+                    # The href already contains the full URL
+                    link = href
+                    self.logger.debug(f"Found link: {link}")
+
+            # Extract days left from status-label
+            status_element = tile.find('div', class_='status-label')
+            days_left = status_element.get_text(strip=True) if status_element else 'Unknown'
+
+            # Extract actual submission dates from submission-period
+            submission_period = ''
+            submission_element = tile.find('div', class_='submission-period')
+            if submission_element:
+                submission_period = submission_element.get_text(strip=True)
+                self.logger.debug(f"Found submission period: {submission_period}")
+
+            # Use submission period as the main date, fallback to days left
+            date_info = submission_period if submission_period else days_left
+
+            # Extract tags from theme-label spans with better cleaning
+            tags = []
+            theme_labels = tile.find_all('span', class_='theme-label')
+            for label in theme_labels:
+                # Get all text and clean it properly
+                tag_text = label.get_text(strip=True)
+                # Remove common icon text patterns
+                tag_text = re.sub(r'^\s*(far|fas|fa-\w+)\s+', '', tag_text)  # Remove FontAwesome classes
+                tag_text = re.sub(r'^\s*check[^a-zA-Z]*', '', tag_text, flags=re.IGNORECASE)  # Remove "check" text
+                tag_text = re.sub(r'^\s*\w{1,2}\s+', '', tag_text)  # Remove short icon text
+
+                # Clean up and validate
+                tag_text = tag_text.strip()
+                if tag_text and len(tag_text) > 2 and not tag_text.isdigit():
+                    tags.append(tag_text)
+
+            # Extract prize amount if available
+            prize_element = tile.find('span', class_='prize-amount')
+            prize = ''
+            if prize_element:
+                prize_text = prize_element.get_text(strip=True)
+                prize = f"${prize_text} in prizes"
+
+            # Extract location (should be "Online" for our filter)
+            location_element = tile.find('div', class_='info')
+            location = 'Online'
+            if location_element:
+                location_span = location_element.find('span')
+                if location_span:
+                    location = location_span.get_text(strip=True)
+
+            # Only include online hackathons
+            if 'online' not in location.lower():
+                self.logger.debug(f"Skipping non-online hackathon: {name} ({location})")
+                return None
+
+            # Create hackathon data structure
+            hackathon_data = {
+                'name': name,
+                'platform': 'Devpost',
+                'link': link,
+                'date': date_info,  # Submission period or days left
+                'days_left': days_left,
+                'submission_period': submission_period,
+                'tags': ', '.join(tags) if tags else 'No tags',
+                'prize': prize,
+                'location': location,
+                'event_type': 'Online',
+                'scraped_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            }
+
+            self.logger.info(f"Found online hackathon: {name} - {days_left} - {link}")
+            return hackathon_data
+
+        except Exception as e:
+            self.logger.error(f"Error parsing Devpost hackathon: {e}")
+            return None
+
+    def create_sample_devpost_hackathons(self):
+        """Create sample Devpost hackathons"""
+        self.logger.info("Creating sample Devpost hackathons")
+
+        from datetime import datetime, timedelta
+
+        sample_hackathons = [
+            {
+                'name': 'World\'s Largest Hackathon presented by Bolt',
+                'link': 'https://worldslargesthackathon.devpost.com/?ref_feature=challenge&ref_medium=discover',
+                'days_left': '2 days left',
+                'submission_period': 'May 30 - Jun 30, 2025',
+                'tags': 'Beginner Friendly, Low/No Code, Machine Learning/AI',
+                'prize': '$1,037,500 in prizes'
+            },
+            {
+                'name': 'Meta Horizon Creator Competition: Elevate Your Mobile World',
+                'link': 'https://mhcp-mobile-update-competition.devpost.com/?ref_feature=challenge&ref_medium=discover',
+                'days_left': '24 days left',
+                'submission_period': 'Jul 1 - Jul 25, 2025',
+                'tags': 'VR/AR, Mobile, Creative',
+                'prize': '$1,000,000 in prizes'
+            }
+        ]
+
+        hackathons = []
+        for sample in sample_hackathons:
+            # Use submission period as main date if available
+            date_info = sample.get('submission_period', sample['days_left'])
+
+            hackathon = {
+                'name': sample['name'],
+                'platform': 'Devpost',
+                'link': sample['link'],
+                'date': date_info,
+                'days_left': sample['days_left'],
+                'submission_period': sample.get('submission_period', ''),
+                'tags': sample['tags'],
+                'prize': sample['prize'],
+                'location': 'Online',
+                'event_type': 'Online',
+                'scraped_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            }
+            hackathons.append(hackathon)
+
+        self.logger.info(f"Created {len(hackathons)} sample Devpost hackathons")
+        return hackathons
+
+    def scrape_unstop(self):
+        """Scrape Unstop for upcoming unpaid hackathons"""
+        hackathons = []
+        driver = None
+
+        try:
+            url = "https://unstop.com/hackathons?payment=unpaid&oppstatus=open"
+            self.logger.info(f"Scraping Unstop: {url}")
+
+            driver = self.get_webdriver()
+            if not driver:
+                self.logger.error("Could not initialize WebDriver for Unstop")
+                return self.create_sample_unstop_hackathons()
+
+            driver.get(url)
+            time.sleep(5)  # Wait for page to load
+
+            # Wait for hackathon listings to load
+            try:
+                WebDriverWait(driver, 10).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, "app-competition-listing"))
+                )
+            except:
+                self.logger.warning("Unstop listings not found, page might not have loaded properly")
+
+            # Get page source and parse with BeautifulSoup
+            soup = BeautifulSoup(driver.page_source, 'html.parser')
+
+            # Find all hackathon listings
+            hackathon_listings = soup.find_all('app-competition-listing')
+            self.logger.info(f"Found {len(hackathon_listings)} Unstop hackathon listings")
+
+            for listing in hackathon_listings:
+                try:
+                    hackathon_data = self.parse_unstop_hackathon(listing)
+                    if hackathon_data:
+                        hackathons.append(hackathon_data)
+                        self.logger.debug(f"Parsed Unstop hackathon: {hackathon_data['name']}")
+                except Exception as e:
+                    self.logger.warning(f"Error parsing Unstop hackathon: {e}")
+                    continue
+
+            self.logger.info(f"Successfully scraped {len(hackathons)} hackathons from Unstop")
+
+        except Exception as e:
+            self.logger.error(f"Error scraping Unstop: {e}")
+            return self.create_sample_unstop_hackathons()
+
+        finally:
+            if driver:
+                driver.quit()
+
+        return hackathons
+
+    def parse_unstop_hackathon(self, listing):
+        """Parse individual Unstop hackathon listing"""
+        try:
+            # Extract hackathon name from h2.double-wrap
+            name_element = listing.find('h2', class_='double-wrap')
+            name = name_element.get_text(strip=True) if name_element else 'Unknown Hackathon'
+
+            # Extract link from the clickable div with id
+            link = ''
+            clickable_div = listing.find('div', class_='cursor-pointer')
+            if clickable_div:
+                # Extract the ID to construct the link
+                div_id = clickable_div.get('id', '')
+                if div_id:
+                    # Extract the opportunity ID from the div id (e.g., "i_1506226_1" -> "1506226")
+                    import re
+                    match = re.search(r'i_(\d+)_', div_id)
+                    if match:
+                        opp_id = match.group(1)
+                        link = f"https://unstop.com/hackathons/{opp_id}"
+                        self.logger.debug(f"Constructed Unstop link: {link}")
+
+            # Extract prize amount from the prize section
+            prize = ''
+            prize_element = listing.find('div', class_='seperate_box align-center prize')
+            if prize_element:
+                # Get the text and clean it up
+                prize_text = prize_element.get_text(strip=True)
+                # Remove emoji and format nicely
+                prize_text = re.sub(r'🏆', '', prize_text).strip()
+                # Clean up rupee symbol formatting
+                prize_text = re.sub(r'₹', '', prize_text).strip()
+                if prize_text and prize_text != '':
+                    prize = f"₹{prize_text}"
+
+            # Extract days left from sections with schedule icon
+            days_left = ''
+            # Look for sections containing schedule icon and "days left"
+            all_sections = listing.find_all('div', class_='seperate_box align-center')
+            for section in all_sections:
+                # Check if this section has a schedule icon
+                schedule_icon = section.find('img', {'alt': 'schedule'}) or section.find('un-icon')
+                if schedule_icon:
+                    section_text = section.get_text(strip=True)
+                    # Look for various time patterns
+                    if any(pattern in section_text.lower() for pattern in ['days left', 'day left', 'hours left', 'hour left']):
+                        # Clean up extra whitespace
+                        days_left = re.sub(r'\s+', ' ', section_text.strip())
+                        self.logger.debug(f"Found days left: {days_left}")
+                        break
+                    # Also check for numeric patterns followed by time units
+                    import re
+                    time_pattern = re.search(r'(\d+)\s*(days?|hours?|minutes?|weeks?|months?)\s*(left|remaining)', section_text.lower())
+                    if time_pattern:
+                        # Clean up extra whitespace
+                        days_left = re.sub(r'\s+', ' ', section_text.strip())
+                        self.logger.debug(f"Found time pattern: {days_left}")
+                        break
+
+            # If no days left found in sections, try a broader search
+            if not days_left:
+                # Look for any text containing "days left" pattern
+                all_text = listing.get_text()
+                time_matches = re.findall(r'\d+\s*days?\s*left', all_text, re.IGNORECASE)
+                if time_matches:
+                    # Clean up the first match
+                    days_left = re.sub(r'\s+', ' ', time_matches[0].strip())
+                    self.logger.debug(f"Found days left in broader search: {days_left}")
+
+            # Create hackathon data structure
+            hackathon_data = {
+                'name': name,
+                'platform': 'Unstop',
+                'link': link,
+                'date': days_left,  # "X days left" format
+                'days_left': days_left,
+                'prize': prize,
+                'location': 'Online',
+                'event_type': 'Hackathon',
+                'tags': 'Hackathon',  # Basic tag
+                'scraped_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            }
+
+            self.logger.info(f"Found Unstop hackathon: {name} - {days_left} - {prize}")
+            return hackathon_data
+
+        except Exception as e:
+            self.logger.error(f"Error parsing Unstop hackathon: {e}")
+            return None
+
+    def create_sample_unstop_hackathons(self):
+        """Create sample Unstop hackathons"""
+        self.logger.info("Creating sample Unstop hackathons")
+
+        sample_hackathons = [
+            {
+                'name': 'AMD AI Sprint - Hackathon',
+                'link': 'https://unstop.com/hackathons/1506226',
+                'days_left': '4 days left',
+                'prize': '₹6,00,000'
+            },
+            {
+                'name': 'Odoo Hackathon 2025',
+                'link': 'https://unstop.com/hackathons/1464473',
+                'days_left': '2 days left',
+                'prize': '₹3,00,000'
+            }
+        ]
+
+        hackathons = []
+        for sample in sample_hackathons:
+            hackathon = {
+                'name': sample['name'],
+                'platform': 'Unstop',
+                'link': sample['link'],
+                'date': sample['days_left'],
+                'days_left': sample['days_left'],
+                'prize': sample['prize'],
+                'location': 'Online',
+                'event_type': 'Hackathon',
+                'tags': 'Hackathon',
+                'scraped_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            }
+            hackathons.append(hackathon)
+
+        self.logger.info(f"Created {len(hackathons)} sample Unstop hackathons")
+        return hackathons
 
     def create_sample_hackathons(self, platform):
         """Create sample MLH Digital Only hackathons based on actual HTML structure"""
@@ -252,40 +654,50 @@ class HackathonScraper:
         future_date_2 = today + timedelta(days=60)
         future_date_3 = today + timedelta(days=90)
 
+        # Use the actual MLH Digital Only events from the real HTML structure
         mlh_digital_hackathons = [
             {
-                'name': 'Global Hack Week: AI Innovation',
-                'link': 'https://events.mlh.io/events/12490-global-hack-week-ai-innovation',
-                'date': f'{future_date_1.strftime("%b %d")} - {(future_date_1 + timedelta(days=6)).strftime("%d")}',
-                'start_date': future_date_1.strftime('%Y-%m-%d'),
-                'end_date': (future_date_1 + timedelta(days=6)).strftime('%Y-%m-%d'),
+                'name': 'Global Hack Week: Season Launch',
+                'link': 'https://events.mlh.io/events/12490-global-hack-week-season-launch',
+                'date': 'Jul 4th - 10th',
+                'start_date': '2025-07-04',
+                'end_date': '2025-07-10',
                 'event_type': 'Digital Only'
             },
             {
-                'name': 'MLH Digital Hackfest',
-                'link': 'https://events.mlh.io/events/12536-mlh-digital-hackfest',
-                'date': f'{future_date_2.strftime("%b %d")} - {(future_date_2 + timedelta(days=2)).strftime("%d")}',
-                'start_date': future_date_2.strftime('%Y-%m-%d'),
-                'end_date': (future_date_2 + timedelta(days=2)).strftime('%Y-%m-%d'),
-                'event_type': 'Digital Only'
-            },
-            {
-                'name': 'Global Hack Week: Cloud Computing',
-                'link': 'https://events.mlh.io/events/12600-global-hack-week-cloud',
-                'date': f'{future_date_3.strftime("%b %d")} - {(future_date_3 + timedelta(days=6)).strftime("%d")}',
-                'start_date': future_date_3.strftime('%Y-%m-%d'),
-                'end_date': (future_date_3 + timedelta(days=6)).strftime('%Y-%m-%d'),
+                'name': 'Data Hackfest',
+                'link': 'https://events.mlh.io/events/12536',
+                'date': 'Jul 25th - 27th',
+                'start_date': '2025-07-25',
+                'end_date': '2025-07-27',
                 'event_type': 'Digital Only'
             }
         ]
 
         hackathons = []
         for sample in mlh_digital_hackathons:
+            # Calculate days left for sample data
+            days_left = ''
+            if sample['start_date']:
+                try:
+                    event_start = datetime.fromisoformat(sample['start_date'])
+                    current_time = datetime.now()
+                    days_diff = (event_start.date() - current_time.date()).days
+                    if days_diff > 0:
+                        days_left = f"{days_diff} days left"
+                    elif days_diff == 0:
+                        days_left = "Today"
+                    else:
+                        days_left = "Started"
+                except:
+                    days_left = "Date TBD"
+
             hackathon = {
                 'name': sample['name'],
                 'platform': 'MLH',
                 'link': sample['link'],
                 'date': sample['date'],
+                'days_left': days_left,
                 'start_date': sample['start_date'],
                 'end_date': sample['end_date'],
                 'event_type': sample['event_type'],

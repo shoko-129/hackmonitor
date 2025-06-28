@@ -15,7 +15,7 @@ class ExcelManager:
         self.excel_file = Path(excel_file_path)
         self.logger = logging.getLogger(__name__)
         self.headers = [
-            'Name', 'Platform', 'Link', 'Date', 'Event Type', 'Scraped At'
+            'Name', 'Platform', 'Link', 'Date', 'Days Left', 'Event Type', 'Tags', 'Prize', 'Location', 'Scraped At'
         ]
         self.ensure_excel_file()
         
@@ -86,12 +86,17 @@ class ExcelManager:
             for row in ws.iter_rows(min_row=2, values_only=True):
                 if row[0]:  # If name is not empty
                     hackathon = {
-                        'name': row[0],
-                        'platform': row[1],
-                        'link': row[2],
-                        'date': row[3],
-                        'event_type': row[4],
-                        'scraped_at': row[5]
+                        'name': row[0] if len(row) > 0 else '',
+                        'platform': row[1] if len(row) > 1 else '',
+                        'link': row[2] if len(row) > 2 else '',
+                        'date': row[3] if len(row) > 3 else '',
+                        'days_left': row[4] if len(row) > 4 else '',
+                        'event_type': row[5] if len(row) > 5 else '',
+                        'tags': row[6] if len(row) > 6 else '',
+                        'prize': row[7] if len(row) > 7 else '',
+                        'location': row[8] if len(row) > 8 else '',
+                        'scraped_at': row[9] if len(row) > 9 else '',
+                        'submission_period': row[3] if len(row) > 3 else ''  # Use date as submission period
                     }
                     hackathons.append(hackathon)
                     
@@ -103,6 +108,11 @@ class ExcelManager:
     def save_hackathons(self, hackathons):
         """Save new hackathons to Excel file"""
         try:
+            # Check if file exists, create if it doesn't
+            if not self.excel_file.exists():
+                self.logger.info(f"Excel file doesn't exist, creating new file: {self.excel_file}")
+                self.create_new_excel_file()
+
             wb = load_workbook(self.excel_file)
             ws = wb.active
             
@@ -114,17 +124,33 @@ class ExcelManager:
                 ws.cell(row=next_row, column=2, value=hackathon.get('platform', ''))
                 ws.cell(row=next_row, column=3, value=hackathon.get('link', ''))
                 ws.cell(row=next_row, column=4, value=hackathon.get('date', ''))
-                ws.cell(row=next_row, column=5, value=hackathon.get('event_type', ''))
-                ws.cell(row=next_row, column=6, value=hackathon.get('scraped_at', ''))
+                ws.cell(row=next_row, column=5, value=hackathon.get('days_left', ''))
+                ws.cell(row=next_row, column=6, value=hackathon.get('event_type', ''))
+                ws.cell(row=next_row, column=7, value=hackathon.get('tags', ''))
+                ws.cell(row=next_row, column=8, value=hackathon.get('prize', ''))
+                ws.cell(row=next_row, column=9, value=hackathon.get('location', ''))
+                ws.cell(row=next_row, column=10, value=hackathon.get('scraped_at', ''))
 
                 next_row += 1
                 
             wb.save(self.excel_file)
             self.logger.info(f"Saved {len(hackathons)} hackathons to Excel file")
             
+        except FileNotFoundError as e:
+            self.logger.error(f"Excel file not found during save, creating new file: {e}")
+            self.create_new_excel_file()
+            # Retry saving after creating the file
+            self.save_hackathons(hackathons)
         except Exception as e:
             self.logger.error(f"Error saving hackathons to Excel: {e}")
-            raise
+            # Try to create a new file as last resort
+            try:
+                self.logger.info("Attempting to create new Excel file as fallback...")
+                self.create_new_excel_file()
+                self.save_hackathons(hackathons)
+            except Exception as retry_error:
+                self.logger.error(f"Failed to create new Excel file: {retry_error}")
+                raise
             
     def update_hackathon_status(self, hackathon_name, status):
         """Update the status of a specific hackathon"""
