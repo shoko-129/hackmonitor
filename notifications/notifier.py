@@ -1,33 +1,64 @@
 """
-Windows Notification Module
-Handles sending Windows toast notifications for hackathon updates.
+Cross-Platform Notification Module
+Handles sending notifications for hackathon updates on Windows, Linux, and macOS.
 """
 
 import logging
 import time
 import subprocess
 import os
+import platform
 
+# Windows notifications
 try:
     from win10toast import ToastNotifier
     WIN10TOAST_AVAILABLE = True
 except ImportError:
     WIN10TOAST_AVAILABLE = False
 
+# Cross-platform notifications
+try:
+    from plyer import notification as plyer_notification
+    PLYER_AVAILABLE = True
+except ImportError:
+    PLYER_AVAILABLE = False
+
+# Linux notifications
+try:
+    import notify2
+    NOTIFY2_AVAILABLE = True
+except ImportError:
+    NOTIFY2_AVAILABLE = False
+
 class WindowsNotifier:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
         self.toaster = None
+        self.system = platform.system()
 
-        # Try to initialize ToastNotifier with error handling
-        if WIN10TOAST_AVAILABLE:
+        # Initialize platform-specific notification systems
+        self._init_platform_notifications()
+
+    def _init_platform_notifications(self):
+        """Initialize platform-specific notification systems"""
+        if self.system == "Windows" and WIN10TOAST_AVAILABLE:
             try:
                 self.toaster = ToastNotifier()
                 # Test if it works
                 self.toaster.classAtom  # This will fail if there's an issue
+                self.logger.info("Windows toast notifications initialized")
             except (AttributeError, Exception) as e:
                 self.logger.warning(f"win10toast initialization failed: {e}")
                 self.toaster = None
+
+        elif self.system == "Linux" and NOTIFY2_AVAILABLE:
+            try:
+                notify2.init("Hackathon Monitor")
+                self.logger.info("Linux notify2 initialized")
+            except Exception as e:
+                self.logger.warning(f"notify2 initialization failed: {e}")
+
+        self.logger.info(f"Notification system initialized for {self.system}")
 
     def _send_fallback_notification(self, title, message, duration=5):
         """Fallback notification using Windows msg command"""
@@ -427,6 +458,113 @@ $toast = New-Object Windows.UI.Notifications.ToastNotification $xml
             self.logger.error(f"Error sending test notification: {e}")
             return False
 
+    def send_notification(self, title, message, duration=5):
+        """Main notification method - sends cross-platform notification"""
+        try:
+            # Try platform-specific methods first
+            if self.system == "Windows":
+                return self._send_windows_notification(title, message, duration)
+            elif self.system == "Linux":
+                return self._send_linux_notification(title, message, duration)
+            elif self.system == "Darwin":  # macOS
+                return self._send_macos_notification(title, message, duration)
+            else:
+                # Fallback to generic method
+                return self._send_generic_notification(title, message, duration)
+
+        except Exception as e:
+            self.logger.error(f"Notification failed: {e}")
+            return False
+
+    def _send_windows_notification(self, title, message, duration):
+        """Send Windows notification"""
+        if self.toaster and WIN10TOAST_AVAILABLE:
+            try:
+                self.toaster.show_toast(title, message, duration=duration, threaded=True)
+                return True
+            except Exception as e:
+                self.logger.warning(f"Windows toast failed: {e}")
+
+        # Fallback to PowerShell
+        return self._send_powershell_notification(title, message)
+
+    def _send_linux_notification(self, title, message, duration):
+        """Send Linux notification"""
+        # Method 1: Try notify2
+        if NOTIFY2_AVAILABLE:
+            try:
+                notice = notify2.Notification(title, message)
+                notice.set_timeout(duration * 1000)  # Convert to milliseconds
+                notice.show()
+                self.logger.info("✅ Linux notification sent via notify2")
+                return True
+            except Exception as e:
+                self.logger.warning(f"notify2 failed: {e}")
+
+        # Method 2: Try notify-send command
+        try:
+            subprocess.run([
+                'notify-send',
+                '--expire-time', str(duration * 1000),
+                '--app-name', 'Hackathon Monitor',
+                title,
+                message
+            ], check=True, capture_output=True)
+            self.logger.info("✅ Linux notification sent via notify-send")
+            return True
+        except (subprocess.CalledProcessError, FileNotFoundError) as e:
+            self.logger.warning(f"notify-send failed: {e}")
+
+        # Method 3: Try plyer
+        if PLYER_AVAILABLE:
+            try:
+                plyer_notification.notify(
+                    title=title,
+                    message=message,
+                    timeout=duration,
+                    app_name="Hackathon Monitor"
+                )
+                self.logger.info("✅ Linux notification sent via plyer")
+                return True
+            except Exception as e:
+                self.logger.warning(f"plyer failed: {e}")
+
+        return False
+
+    def _send_macos_notification(self, title, message, duration):
+        """Send macOS notification"""
+        try:
+            script = f'''
+            display notification "{message}" with title "{title}" sound name "default"
+            '''
+            subprocess.run(['osascript', '-e', script], check=True, capture_output=True)
+            self.logger.info("✅ macOS notification sent")
+            return True
+        except Exception as e:
+            self.logger.warning(f"macOS notification failed: {e}")
+            return False
+
+    def _send_generic_notification(self, title, message, duration):
+        """Generic fallback notification"""
+        if PLYER_AVAILABLE:
+            try:
+                plyer_notification.notify(
+                    title=title,
+                    message=message,
+                    timeout=duration,
+                    app_name="Hackathon Monitor"
+                )
+                self.logger.info("✅ Generic notification sent via plyer")
+                return True
+            except Exception as e:
+                self.logger.warning(f"Generic plyer failed: {e}")
+
+        # Last resort: print to console
+        print(f"\n🔔 NOTIFICATION: {title}")
+        print(f"📝 {message}\n")
+        self.logger.info("✅ Console notification sent")
+        return True
+
     def send_simple_notification(self, title, message, duration=30):
         """Send a simple notification with fallback for compatibility"""
         success = False
@@ -465,5 +603,6 @@ $toast = New-Object Windows.UI.Notifications.ToastNotification $xml
 
         return success
 
-# Create alias for backward compatibility
+# Create aliases for backward compatibility
 Notifier = WindowsNotifier
+CrossPlatformNotifier = WindowsNotifier

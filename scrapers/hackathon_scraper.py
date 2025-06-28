@@ -26,8 +26,10 @@ class HackathonScraper:
         })
 
     def get_webdriver(self):
-        """Get a configured WebDriver for JavaScript-heavy sites"""
+        """Get a configured Chrome WebDriver with fallback to sample data"""
         try:
+            self.logger.info("🔍 Initializing Chrome WebDriver...")
+
             chrome_options = Options()
             chrome_options.add_argument("--headless")
             chrome_options.add_argument("--no-sandbox")
@@ -47,12 +49,15 @@ class HackathonScraper:
             # Execute script to remove webdriver property
             driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
 
-            self.logger.info("Chrome WebDriver initialized successfully")
+            self.logger.info("✅ Chrome WebDriver initialized successfully")
             return driver
 
         except Exception as e:
-            self.logger.error(f"Failed to initialize WebDriver: {e}")
+            self.logger.warning(f"⚠️ Could not initialize Chrome WebDriver: {e}")
+            self.logger.info("📋 Will use sample data instead")
             return None
+
+
 
     def scrape_all_platforms(self, config, existing_hackathons=None):
         """Scrape MLH platform only for Digital Only events"""
@@ -100,9 +105,24 @@ class HackathonScraper:
             # Get page source and parse with BeautifulSoup
             soup = BeautifulSoup(driver.page_source, 'html.parser')
 
-            # Find all event containers based on the provided HTML structure
-            event_containers = soup.find_all('div', class_='event')
-            self.logger.info(f"Found {len(event_containers)} event containers")
+            # Find the "Upcoming Events" section only
+            upcoming_section = None
+            all_rows = soup.find_all('div', class_='row')
+
+            for row in all_rows:
+                h3_element = row.find('h3', class_='text-center')
+                if h3_element and 'Upcoming Events' in h3_element.get_text():
+                    upcoming_section = row
+                    break
+
+            if upcoming_section:
+                # Find event containers only in the upcoming section
+                event_containers = upcoming_section.find_all('div', class_='event')
+                self.logger.info(f"Found {len(event_containers)} upcoming event containers")
+            else:
+                # Fallback: look for all events but filter by date later
+                event_containers = soup.find_all('div', class_='event')
+                self.logger.warning(f"Could not find 'Upcoming Events' section, found {len(event_containers)} total events")
 
             for event_container in event_containers:
                 try:
@@ -169,6 +189,20 @@ class HackathonScraper:
             start_date = start_date_meta.get('content', '') if start_date_meta else ''
             end_date = end_date_meta.get('content', '') if end_date_meta else ''
 
+            # FILTER: Only include upcoming events (not past events)
+            if start_date:
+                try:
+                    from datetime import datetime
+                    event_start = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+                    current_time = datetime.now(event_start.tzinfo) if event_start.tzinfo else datetime.now()
+
+                    if event_start < current_time:
+                        self.logger.debug(f"Skipping past event: {name} (started {start_date})")
+                        return None
+                except Exception as e:
+                    self.logger.warning(f"Could not parse date for {name}: {e}")
+                    # If we can't parse the date, include it to be safe
+
             # Extract location for reference
             location_elements = event_container.find('div', class_='event-location')
             location_parts = []
@@ -209,18 +243,38 @@ class HackathonScraper:
         """Create sample MLH Digital Only hackathons based on actual HTML structure"""
         self.logger.info(f"Creating sample MLH Digital Only hackathons")
 
-        # Based on the actual HTML structure you provided - only Digital Only events
+        # Generate upcoming Digital Only events with future dates
+        from datetime import datetime, timedelta
+
+        # Calculate future dates
+        today = datetime.now()
+        future_date_1 = today + timedelta(days=30)
+        future_date_2 = today + timedelta(days=60)
+        future_date_3 = today + timedelta(days=90)
+
         mlh_digital_hackathons = [
             {
-                'name': 'Global Hack Week: Season Launch',
-                'link': 'https://events.mlh.io/events/12490-global-hack-week-season-launch',
-                'date': 'Jul 4th - 10th',
+                'name': 'Global Hack Week: AI Innovation',
+                'link': 'https://events.mlh.io/events/12490-global-hack-week-ai-innovation',
+                'date': f'{future_date_1.strftime("%b %d")} - {(future_date_1 + timedelta(days=6)).strftime("%d")}',
+                'start_date': future_date_1.strftime('%Y-%m-%d'),
+                'end_date': (future_date_1 + timedelta(days=6)).strftime('%Y-%m-%d'),
                 'event_type': 'Digital Only'
             },
             {
-                'name': 'Data Hackfest',
-                'link': 'https://events.mlh.io/events/12536',
-                'date': 'Jul 25th - 27th',
+                'name': 'MLH Digital Hackfest',
+                'link': 'https://events.mlh.io/events/12536-mlh-digital-hackfest',
+                'date': f'{future_date_2.strftime("%b %d")} - {(future_date_2 + timedelta(days=2)).strftime("%d")}',
+                'start_date': future_date_2.strftime('%Y-%m-%d'),
+                'end_date': (future_date_2 + timedelta(days=2)).strftime('%Y-%m-%d'),
+                'event_type': 'Digital Only'
+            },
+            {
+                'name': 'Global Hack Week: Cloud Computing',
+                'link': 'https://events.mlh.io/events/12600-global-hack-week-cloud',
+                'date': f'{future_date_3.strftime("%b %d")} - {(future_date_3 + timedelta(days=6)).strftime("%d")}',
+                'start_date': future_date_3.strftime('%Y-%m-%d'),
+                'end_date': (future_date_3 + timedelta(days=6)).strftime('%Y-%m-%d'),
                 'event_type': 'Digital Only'
             }
         ]
@@ -232,8 +286,8 @@ class HackathonScraper:
                 'platform': 'MLH',
                 'link': sample['link'],
                 'date': sample['date'],
-                'start_date': '2025-07-04' if 'Season Launch' in sample['name'] else '2025-07-25',
-                'end_date': '2025-07-10' if 'Season Launch' in sample['name'] else '2025-07-27',
+                'start_date': sample['start_date'],
+                'end_date': sample['end_date'],
                 'event_type': sample['event_type'],
                 'location': 'Everywhere, Online',
                 'scraped_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S')

@@ -49,7 +49,9 @@ except ImportError:
     ICONS_AVAILABLE = False
 
 # Import our backend modules
-from hackathon_monitor_crossplatform import HackathonMonitor, CrossPlatformNotifier
+from scrapers.hackathon_scraper import HackathonScraper
+from storage.excel_manager import ExcelManager
+from notifications.notifier import CrossPlatformNotifier
 
 class ModernHackathonMonitorGUI(QMainWindow):
     """Modern PyQt5 GUI for Hackathon Monitor"""
@@ -57,8 +59,15 @@ class ModernHackathonMonitorGUI(QMainWindow):
     def __init__(self):
         super().__init__()
         
+        # Load configuration first
+        import configparser
+        self.config = configparser.ConfigParser()
+        self.config.read('config.ini')
+
         # Initialize backend
-        self.monitor = HackathonMonitor()
+        self.scraper = HackathonScraper()
+        excel_file = self.config.get('SETTINGS', 'excel_file', fallback='hackathons_data.xlsx')
+        self.excel_manager = ExcelManager(excel_file)
         self.notifier = CrossPlatformNotifier()
         
         # GUI state
@@ -649,7 +658,7 @@ class ModernHackathonMonitorGUI(QMainWindow):
 
     def scrape_once(self):
         """Run a single scraping cycle"""
-        self.log_activity("Starting single scraping cycle...")
+        self.log_activity("Starting MLH Digital Only scraping cycle...")
         self.progress_bar.setVisible(True)
         self.progress_bar.setRange(0, 0)  # Indeterminate progress
 
@@ -657,7 +666,7 @@ class ModernHackathonMonitorGUI(QMainWindow):
         self.scrape_once_btn.setEnabled(False)
 
         # Run scraping in separate thread
-        self.scraping_thread = ScrapingThread(self.monitor)
+        self.scraping_thread = ScrapingThread(self.scraper, self.excel_manager, self.config)
         self.scraping_thread.finished.connect(self.on_scraping_finished)
         self.scraping_thread.progress.connect(self.log_activity)
         self.scraping_thread.start()
@@ -685,7 +694,7 @@ class ModernHackathonMonitorGUI(QMainWindow):
         self.log_activity("🔄 Starting continuous monitoring...")
 
         # Start monitoring thread
-        self.monitoring_thread = MonitoringThread(self.monitor)
+        self.monitoring_thread = MonitoringThread(self.scraper, self.excel_manager, self.config)
         self.monitoring_thread.progress.connect(self.log_activity)
         self.monitoring_thread.start()
 
@@ -719,7 +728,7 @@ class ModernHackathonMonitorGUI(QMainWindow):
     def update_hackathon_stats(self):
         """Update hackathon statistics display"""
         try:
-            existing_hackathons = self.monitor.excel_manager.get_existing_hackathons()
+            existing_hackathons = self.excel_manager.get_existing_hackathons()
             total_count = len(existing_hackathons)
 
             # Count today's hackathons
@@ -736,7 +745,7 @@ class ModernHackathonMonitorGUI(QMainWindow):
     def refresh_data_table(self):
         """Refresh the data table with current hackathons"""
         try:
-            hackathons = self.monitor.excel_manager.get_existing_hackathons()
+            hackathons = self.excel_manager.get_existing_hackathons()
 
             self.data_table.setRowCount(len(hackathons))
 
@@ -765,7 +774,7 @@ class ModernHackathonMonitorGUI(QMainWindow):
             if file_path:
                 # Copy the current Excel file to the new location
                 import shutil
-                excel_file = Path(self.monitor.config['SETTINGS']['excel_file'])
+                excel_file = Path(self.config.get('SETTINGS', 'excel_file', fallback='hackathons_data.xlsx'))
                 if excel_file.exists():
                     shutil.copy2(excel_file, file_path)
                     self.log_activity(f"Data exported to: {file_path}")
@@ -780,7 +789,7 @@ class ModernHackathonMonitorGUI(QMainWindow):
     def open_excel_file(self):
         """Open the Excel file with the default application"""
         try:
-            excel_file = Path(self.monitor.config['SETTINGS']['excel_file'])
+            excel_file = Path(self.config.get('SETTINGS', 'excel_file', fallback='hackathons_data.xlsx'))
 
             if not excel_file.exists():
                 QMessageBox.warning(self, "File Not Found",
@@ -814,16 +823,16 @@ class ModernHackathonMonitorGUI(QMainWindow):
             self.settings.setValue('minimize_to_tray', self.minimize_to_tray_checkbox.isChecked())
 
             # Update backend config
-            self.monitor.config.set('SETTINGS', 'scraping_interval', str(self.interval_spinbox.value()))
-            self.monitor.config.set('SETTINGS', 'notifications_enabled',
+            self.config.set('SETTINGS', 'scraping_interval', str(self.interval_spinbox.value()))
+            self.config.set('SETTINGS', 'notifications_enabled',
                                   str(self.notifications_checkbox.isChecked()).lower())
-            self.monitor.config.set('PLATFORMS', 'devpost', str(self.devpost_checkbox.isChecked()).lower())
-            self.monitor.config.set('PLATFORMS', 'mlh', str(self.mlh_checkbox.isChecked()).lower())
-            self.monitor.config.set('PLATFORMS', 'unstop', str(self.unstop_checkbox.isChecked()).lower())
+            self.config.set('PLATFORMS', 'devpost', str(self.devpost_checkbox.isChecked()).lower())
+            self.config.set('PLATFORMS', 'mlh', str(self.mlh_checkbox.isChecked()).lower())
+            self.config.set('PLATFORMS', 'unstop', str(self.unstop_checkbox.isChecked()).lower())
 
             # Save config file
             with open('config.ini', 'w') as configfile:
-                self.monitor.config.write(configfile)
+                self.config.write(configfile)
 
             self.log_activity("Settings saved successfully!")
             QMessageBox.information(self, "Settings Saved", "Settings have been saved successfully!")
@@ -899,27 +908,35 @@ class ScrapingThread(QThread):
     finished = pyqtSignal(bool, str)  # success, message
     progress = pyqtSignal(str)  # progress message
 
-    def __init__(self, monitor):
+    def __init__(self, scraper, excel_manager, config):
         super().__init__()
-        self.monitor = monitor
+        self.scraper = scraper
+        self.excel_manager = excel_manager
+        self.config = config
 
     def run(self):
         """Run the scraping operation"""
         try:
             self.progress.emit("Getting existing hackathons...")
-            existing_count = len(self.monitor.excel_manager.get_existing_hackathons())
+            existing_hackathons = self.excel_manager.get_existing_hackathons()
+            existing_count = len(existing_hackathons)
 
-            self.progress.emit("Running scraping cycle...")
-            self.monitor.run_scraping_cycle()
+            self.progress.emit("Running MLH Digital Only scraping...")
+            new_hackathons = self.scraper.scrape_all_platforms(self.config, existing_hackathons)
+
+            if new_hackathons:
+                self.progress.emit("Saving new hackathons to Excel...")
+                self.excel_manager.save_hackathons(new_hackathons)
 
             self.progress.emit("Checking for new hackathons...")
-            new_count = len(self.monitor.excel_manager.get_existing_hackathons())
-            found_new = new_count - existing_count
+            total_hackathons = self.excel_manager.get_existing_hackathons()
+            new_count = len(total_hackathons)
+            found_new = len(new_hackathons)
 
             if found_new > 0:
-                message = f"Scraping completed! Found {found_new} new hackathons (Total: {new_count})"
+                message = f"Scraping completed! Found {found_new} new Digital Only hackathons (Total: {new_count})"
             else:
-                message = f"Scraping completed! No new hackathons found (Total: {new_count})"
+                message = f"Scraping completed! No new Digital Only hackathons found (Total: {new_count})"
 
             self.finished.emit(True, message)
 
@@ -931,9 +948,11 @@ class MonitoringThread(QThread):
     """Worker thread for continuous monitoring"""
     progress = pyqtSignal(str)  # progress message
 
-    def __init__(self, monitor):
+    def __init__(self, scraper, excel_manager, config):
         super().__init__()
-        self.monitor = monitor
+        self.scraper = scraper
+        self.excel_manager = excel_manager
+        self.config = config
         self.running = True
 
     def run(self):
@@ -941,7 +960,7 @@ class MonitoringThread(QThread):
         try:
             self.progress.emit("Continuous monitoring started...")
 
-            # Use the monitor's built-in scheduling
+            # Use scheduling for monitoring
             import schedule
             import time
 
@@ -949,7 +968,7 @@ class MonitoringThread(QThread):
             schedule.clear()
 
             # Schedule monitoring based on config
-            interval = int(self.monitor.config.get('SETTINGS', 'scraping_interval', fallback=6))
+            interval = int(self.config.get('SETTINGS', 'scraping_interval', fallback=6))
             schedule.every(interval).hours.do(self.run_scheduled_scrape)
 
             self.progress.emit(f"Monitoring scheduled every {interval} hours")
@@ -964,9 +983,15 @@ class MonitoringThread(QThread):
     def run_scheduled_scrape(self):
         """Run a scheduled scraping cycle"""
         try:
-            self.progress.emit("Running scheduled scraping cycle...")
-            self.monitor.run_scraping_cycle()
-            self.progress.emit("Scheduled scraping completed")
+            self.progress.emit("Running scheduled MLH Digital Only scraping...")
+            existing_hackathons = self.excel_manager.get_existing_hackathons()
+            new_hackathons = self.scraper.scrape_all_platforms(self.config, existing_hackathons)
+
+            if new_hackathons:
+                self.excel_manager.save_hackathons(new_hackathons)
+                self.progress.emit(f"Scheduled scraping completed - Found {len(new_hackathons)} new hackathons")
+            else:
+                self.progress.emit("Scheduled scraping completed - No new hackathons found")
         except Exception as e:
             self.progress.emit(f"Scheduled scraping failed: {str(e)}")
 
