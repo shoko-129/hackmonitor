@@ -492,9 +492,29 @@ class HackathonMonitorInstaller:
         except Exception as e:
             self.show_message("error", "Error", f"Failed to install application: {e}")
             return False
-            
+
+    def create_launcher_script(self):
+        """Create a proper launcher script for the application"""
+        try:
+            # Create a Windows launcher script
+            launcher_path = self.install_dir / "Launch Hackathon Monitor.bat"
+
+            with open(launcher_path, 'w') as f:
+                f.write('@echo off\n')
+                f.write('title Hackathon Monitor\n')
+                f.write(f'cd /d "{self.install_dir}"\n')
+                f.write(f'"{sys.executable}" hackathon_monitor_pyqt.py\n')
+                f.write('if errorlevel 1 pause\n')
+
+            print("[+] Created launcher script")
+            return True
+
+        except Exception as e:
+            print(f"[!] Failed to create launcher script: {e}")
+            return False
+
     def create_desktop_shortcut(self):
-        """Create desktop shortcut"""
+        """Create desktop shortcut (.lnk file)"""
         if not self.desktop_shortcut_var.get():
             self.update_progress(80, "Skipping desktop shortcut creation...")
             return True
@@ -502,32 +522,72 @@ class HackathonMonitorInstaller:
         self.update_progress(80, "Creating desktop shortcut...")
 
         try:
-            import win32com.client
-            
             desktop = Path.home() / "Desktop"
             shortcut_path = desktop / "Hackathon Monitor.lnk"
-            
-            shell = win32com.client.Dispatch("WScript.Shell")
-            shortcut = shell.CreateShortCut(str(shortcut_path))
-            shortcut.Targetpath = sys.executable
-            shortcut.Arguments = f'"{self.install_dir / "hackathon_monitor_pyqt.py"}"'
-            shortcut.WorkingDirectory = str(self.install_dir)
-            shortcut.IconLocation = str(self.install_dir / "logo.png")
-            shortcut.save()
-            
-            return True
-            
+
+            # Method 1: Try using win32com.client (if available)
+            try:
+                import win32com.client
+
+                shell = win32com.client.Dispatch("WScript.Shell")
+                shortcut = shell.CreateShortCut(str(shortcut_path))
+
+                # Point to the launcher script for better user experience
+                launcher_script = self.install_dir / "Launch Hackathon Monitor.bat"
+                shortcut.Targetpath = str(launcher_script)
+                shortcut.WorkingDirectory = str(self.install_dir)
+
+                # Set icon if available
+                icon_path = self.install_dir / "logo.png"
+                if icon_path.exists():
+                    shortcut.IconLocation = str(icon_path)
+
+                shortcut.save()
+                print("[+] Created .lnk shortcut using win32com")
+                return True
+
+            except ImportError:
+                # Method 2: Use PowerShell to create .lnk file
+                print("[*] win32com not available, using PowerShell...")
+
+                launcher_script = self.install_dir / "Launch Hackathon Monitor.bat"
+                powershell_script = f'''
+$WshShell = New-Object -comObject WScript.Shell
+$Shortcut = $WshShell.CreateShortcut("{shortcut_path}")
+$Shortcut.TargetPath = "{launcher_script}"
+$Shortcut.WorkingDirectory = "{self.install_dir}"
+$Shortcut.Save()
+'''
+
+                # Run PowerShell command to create .lnk file
+                cmd = ["powershell", "-Command", powershell_script]
+                result = self.run_subprocess_hidden(cmd, capture_output=True, text=True)
+
+                if result.returncode == 0:
+                    print("[+] Created .lnk shortcut using PowerShell")
+                    return True
+                else:
+                    raise Exception("PowerShell shortcut creation failed")
+
         except Exception as e:
+            print(f"[!] .lnk creation failed: {e}")
             # Fallback: create batch file
             try:
+                print("[*] Creating .bat file as fallback...")
+                desktop = Path.home() / "Desktop"
                 batch_file = desktop / "Hackathon Monitor.bat"
+
                 with open(batch_file, 'w') as f:
                     f.write('@echo off\n')
                     f.write(f'cd /d "{self.install_dir}"\n')
                     f.write(f'"{sys.executable}" hackathon_monitor_pyqt.py\n')
                     f.write('pause\n')
+
+                print("[+] Created .bat shortcut as fallback")
                 return True
-            except:
+
+            except Exception as e2:
+                print(f"[!] Fallback .bat creation failed: {e2}")
                 return False
 
     def add_to_registry(self):
@@ -628,6 +688,11 @@ class HackathonMonitorInstaller:
                 self.update_progress(50, "Installing application files...")
                 if not self.install_application():
                     return
+
+                # Create launcher script
+                print("[STEP] Creating launcher script...")
+                self.update_progress(75, "Creating launcher script...")
+                self.create_launcher_script()
 
                 # Create desktop shortcut
                 print("[STEP] Creating desktop shortcut...")
