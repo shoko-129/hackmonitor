@@ -25,11 +25,24 @@ class HackathonMonitorInstaller:
         self.github_repo = "https://github.com/shoko-129/hackmonitor"
         self.download_url = "https://github.com/shoko-129/hackmonitor/archive/refs/heads/main.zip"
         
-        # Create GUI
+        # Create GUI with enhanced styling
         self.root = tk.Tk()
         self.root.title("Hackathon Monitor Installer")
-        self.root.geometry("600x650")
+        self.root.geometry("650x700")
         self.root.resizable(False, False)
+
+        # Center the window on screen
+        self.root.update_idletasks()
+        x = (self.root.winfo_screenwidth() // 2) - (650 // 2)
+        y = (self.root.winfo_screenheight() // 2) - (700 // 2)
+        self.root.geometry(f"650x700+{x}+{y}")
+
+        # Set window icon if available
+        try:
+            if hasattr(self, 'logo_path') and self.logo_path.exists():
+                self.root.iconbitmap(str(self.logo_path))
+        except:
+            pass
         
         # Variables
         self.progress_var = tk.DoubleVar()
@@ -41,70 +54,31 @@ class HackathonMonitorInstaller:
     def browse_location(self):
         """Browse for installation location"""
         try:
-            import os
-            import platform
-
-            # Get current directory from entry
-            current_dir = self.dir_var.get()
-
-            # Set safe initial directory based on OS
-            if platform.system() == "Windows":
-                # Windows-specific safe directories
-                safe_dirs = [
-                    current_dir,
-                    "C:\\Program Files",
-                    "C:\\",
-                    os.path.expanduser("~\\Desktop"),
-                    os.path.expanduser("~")
-                ]
-            else:
-                # Linux/macOS safe directories
-                safe_dirs = [
-                    current_dir,
-                    os.path.expanduser("~/Desktop"),
-                    os.path.expanduser("~"),
-                    "/tmp"
-                ]
-
-            # Find first existing directory
-            initial_dir = None
-            for dir_path in safe_dirs:
-                if dir_path and os.path.exists(dir_path) and os.path.isdir(dir_path):
-                    initial_dir = dir_path
-                    break
-
-            # Open folder dialog
-            if initial_dir:
-                folder = filedialog.askdirectory(
-                    title="Select Installation Directory",
-                    initialdir=initial_dir
-                )
-            else:
-                # Fallback without initial directory
-                folder = filedialog.askdirectory(
-                    title="Select Installation Directory"
-                )
+            # Simple approach - just open the dialog without initial directory first
+            folder = filedialog.askdirectory(title="Select Installation Directory")
 
             if folder:
-                # Normalize path for Windows
-                if platform.system() == "Windows":
-                    folder = os.path.normpath(folder)
+                # Convert forward slashes to backslashes on Windows
+                import os
+                folder = os.path.normpath(folder)
                 self.dir_var.set(folder)
                 print(f"✅ Selected installation directory: {folder}")
+            else:
+                print("ℹ️ No folder selected")
 
         except Exception as e:
             print(f"❌ Browse error: {e}")
-            # Last resort fallback
+            # Try even simpler approach
             try:
-                folder = filedialog.askdirectory()
+                import tkinter.filedialog as fd
+                folder = fd.askdirectory()
                 if folder:
                     self.dir_var.set(folder)
-                    print(f"✅ Fallback selection: {folder}")
+                    print(f"✅ Simple browse success: {folder}")
             except Exception as e2:
-                print(f"❌ Fallback browse also failed: {e2}")
-                # Show user-friendly message
-                messagebox.showwarning("Browse Error",
-                    "Could not open folder browser. Please type the path manually.")
+                print(f"❌ Simple browse failed: {e2}")
+                messagebox.showinfo("Browse Not Available",
+                    "Folder browser is not available.\n\nPlease type the installation path manually in the text box above.\n\nExample: C:\\Program Files\\Hackathon Monitor")
 
     def on_python_deps_change(self):
         """Handle Python dependencies checkbox change"""
@@ -121,109 +95,165 @@ class HackathonMonitorInstaller:
             print("⚠️ Desktop shortcut creation disabled")
 
     def setup_gui(self):
-        """Setup the installer GUI to match the design"""
-        # Configure main window
-        self.root.configure(bg='#f0f0f0')
+        """Setup the installer GUI with enhanced styling"""
+        # Configure main window with gradient-like effect
+        self.root.configure(bg='#f8f9fa')
 
-        # Header with version
-        header_frame = tk.Frame(self.root, bg='#e8e8e8', height=60)
+        # Header with version - enhanced styling
+        header_frame = tk.Frame(self.root, bg='#e9ecef', height=65, relief='flat')
         header_frame.pack(fill=tk.X, padx=0, pady=0)
         header_frame.pack_propagate(False)
 
+        # Add subtle border at bottom of header
+        header_border = tk.Frame(header_frame, bg='#dee2e6', height=1)
+        header_border.pack(side=tk.BOTTOM, fill=tk.X)
+
         version_label = tk.Label(header_frame, text="Hackathon_monitor v1.0.0",
-                                font=("Segoe UI", 11), bg='#e8e8e8', fg='#333333')
-        version_label.pack(anchor=tk.W, padx=20, pady=20)
+                                font=("Arial", 11, "normal"), bg='#e9ecef', fg='#495057')
+        version_label.pack(anchor=tk.W, padx=25, pady=22)
 
-        # Main content frame
-        content_frame = tk.Frame(self.root, bg='#f0f0f0')
-        content_frame.pack(fill=tk.BOTH, expand=True, padx=30, pady=20)
+        # Main content frame with better spacing
+        content_frame = tk.Frame(self.root, bg='#f8f9fa')
+        content_frame.pack(fill=tk.BOTH, expand=True, padx=35, pady=25)
 
-        # Title
+        # Title with enhanced typography
         title_label = tk.Label(content_frame, text="Hackathon monitor installer",
-                              font=("Segoe UI", 18, "bold"), bg='#f0f0f0', fg='#000000')
-        title_label.pack(anchor=tk.W, pady=(0, 30))
+                              font=("Arial", 20, "bold"), bg='#f8f9fa', fg='#212529')
+        title_label.pack(anchor=tk.W, pady=(0, 35))
 
-        # Checkboxes frame
-        checkbox_frame = tk.Frame(content_frame, bg='#f0f0f0')
-        checkbox_frame.pack(fill=tk.X, pady=(0, 30))
+        # Checkboxes frame with enhanced styling
+        checkbox_frame = tk.Frame(content_frame, bg='#f8f9fa')
+        checkbox_frame.pack(fill=tk.X, pady=(0, 35))
 
-        # Python Dependencies checkbox
+        # Python Dependencies checkbox with cross-platform styling
         self.python_deps_var = tk.BooleanVar(value=True)
         python_checkbox = tk.Checkbutton(checkbox_frame,
                                         text="Python Dependencies automatically",
                                         variable=self.python_deps_var,
-                                        font=("Segoe UI", 11),
-                                        bg='#f0f0f0', fg='#000000',
-                                        activebackground='#f0f0f0',
-                                        selectcolor='white',
+                                        font=("Arial", 12),
+                                        bg='#f8f9fa', fg='#495057',
+                                        activebackground='#f8f9fa',
+                                        activeforeground='#212529',
+                                        selectcolor='#ffffff',
+                                        borderwidth=0,
+                                        highlightthickness=0,
                                         command=self.on_python_deps_change)
-        python_checkbox.pack(anchor=tk.W, pady=5)
+        python_checkbox.pack(anchor=tk.W, pady=8)
 
-        # Desktop Shortcut checkbox
+        # Desktop Shortcut checkbox with cross-platform styling
         self.desktop_shortcut_var = tk.BooleanVar(value=True)
         shortcut_checkbox = tk.Checkbutton(checkbox_frame,
                                           text="Create desktop Shortcut",
                                           variable=self.desktop_shortcut_var,
-                                          font=("Segoe UI", 11),
-                                          bg='#f0f0f0', fg='#000000',
-                                          activebackground='#f0f0f0',
-                                          selectcolor='white',
+                                          font=("Arial", 12),
+                                          bg='#f8f9fa', fg='#495057',
+                                          activebackground='#f8f9fa',
+                                          activeforeground='#212529',
+                                          selectcolor='#ffffff',
+                                          borderwidth=0,
+                                          highlightthickness=0,
                                           command=self.on_shortcut_change)
-        shortcut_checkbox.pack(anchor=tk.W, pady=5)
+        shortcut_checkbox.pack(anchor=tk.W, pady=8)
 
-        # Location section
-        location_frame = tk.Frame(content_frame, bg='#f0f0f0')
-        location_frame.pack(fill=tk.X, pady=(20, 0))
+        # Location section with enhanced styling
+        location_frame = tk.Frame(content_frame, bg='#f8f9fa')
+        location_frame.pack(fill=tk.X, pady=(25, 0))
 
         location_label = tk.Label(location_frame, text="Location :",
-                                 font=("Segoe UI", 11), bg='#f0f0f0', fg='#000000')
-        location_label.pack(anchor=tk.W, pady=(0, 5))
+                                 font=("Segoe UI", 12, "normal"), bg='#f8f9fa', fg='#495057')
+        location_label.pack(anchor=tk.W, pady=(0, 8))
 
-        # Location entry and browse button
-        location_entry_frame = tk.Frame(location_frame, bg='#f0f0f0')
-        location_entry_frame.pack(fill=tk.X, pady=(0, 20))
+        # Location entry and browse button with modern styling
+        location_entry_frame = tk.Frame(location_frame, bg='#f8f9fa')
+        location_entry_frame.pack(fill=tk.X, pady=(0, 25))
 
         self.dir_var = tk.StringVar(value=str(self.install_dir))
         location_entry = tk.Entry(location_entry_frame, textvariable=self.dir_var,
-                                 font=("Segoe UI", 10), bg='white', relief='solid', bd=1)
-        location_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, ipady=8)
+                                 font=("Segoe UI", 11), bg='#ffffff', fg='#495057',
+                                 relief='solid', bd=1, borderwidth=1,
+                                 highlightthickness=1, highlightcolor='#007bff',
+                                 highlightbackground='#ced4da')
+        location_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, ipady=12)
+
+        # Add tooltip-like behavior with better UX
+        def on_entry_click(event):
+            if location_entry.get() == str(self.install_dir):
+                location_entry.select_range(0, tk.END)
+
+        def on_entry_focus_in(event):
+            location_entry.config(highlightbackground='#007bff')
+
+        def on_entry_focus_out(event):
+            location_entry.config(highlightbackground='#ced4da')
+
+        location_entry.bind('<Button-1>', on_entry_click)
+        location_entry.bind('<FocusIn>', on_entry_focus_in)
+        location_entry.bind('<FocusOut>', on_entry_focus_out)
 
         browse_btn = tk.Button(location_entry_frame, text="browse",
-                              font=("Segoe UI", 10), bg='#e0e0e0', relief='solid', bd=1,
-                              padx=20, pady=8, command=self.browse_location)
-        browse_btn.pack(side=tk.RIGHT, padx=(10, 0))
+                              font=("Segoe UI", 11), bg='#e9ecef', fg='#495057',
+                              relief='solid', bd=1, borderwidth=1,
+                              activebackground='#dee2e6', activeforeground='#212529',
+                              padx=25, pady=12, cursor='hand2',
+                              command=self.browse_location)
+        browse_btn.pack(side=tk.RIGHT, padx=(12, 0))
 
-        # Process section
+        # Process section with enhanced styling
         process_label = tk.Label(content_frame, text="Process :",
-                                font=("Segoe UI", 11), bg='#f0f0f0', fg='#000000')
-        process_label.pack(anchor=tk.W, pady=(10, 5))
+                                font=("Segoe UI", 12, "normal"), bg='#f8f9fa', fg='#495057')
+        process_label.pack(anchor=tk.W, pady=(15, 8))
 
-        # Progress bar
+        # Progress bar with modern styling
         self.progress_bar = ttk.Progressbar(content_frame, variable=self.progress_var,
-                                           maximum=100, style='Custom.Horizontal.TProgressbar')
-        self.progress_bar.pack(fill=tk.X, pady=(0, 20), ipady=8)
+                                           maximum=100, style='Modern.Horizontal.TProgressbar')
+        self.progress_bar.pack(fill=tk.X, pady=(0, 25), ipady=10)
 
-        # Configure progress bar style
+        # Configure modern progress bar style
         style = ttk.Style()
-        style.configure('Custom.Horizontal.TProgressbar', background='#4CAF50')
+        style.theme_use('clam')  # Use a modern theme
+        style.configure('Modern.Horizontal.TProgressbar',
+                       background='#28a745',
+                       troughcolor='#e9ecef',
+                       borderwidth=0,
+                       lightcolor='#28a745',
+                       darkcolor='#28a745')
 
-        # Buttons frame
-        button_frame = tk.Frame(self.root, bg='#f0f0f0')
-        button_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=30, pady=20)
+        # Buttons frame with enhanced styling
+        button_frame = tk.Frame(self.root, bg='#f8f9fa')
+        button_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=35, pady=25)
 
-        # Cancel button
+        # Cancel button with modern styling
         self.cancel_btn = tk.Button(button_frame, text="Cancel",
-                                   font=("Segoe UI", 11), bg='#d0d0d0', fg='#000000',
-                                   relief='solid', bd=1, padx=30, pady=10,
+                                   font=("Segoe UI", 12), bg='#6c757d', fg='#ffffff',
+                                   relief='flat', bd=0, padx=35, pady=12,
+                                   activebackground='#5a6268', activeforeground='#ffffff',
+                                   cursor='hand2',
                                    command=self.root.quit)
-        self.cancel_btn.pack(side=tk.RIGHT, padx=(10, 0))
+        self.cancel_btn.pack(side=tk.RIGHT, padx=(15, 0))
 
-        # Install button
+        # Install button with premium styling
         self.install_btn = tk.Button(button_frame, text="Install",
-                                    font=("Segoe UI", 11, "bold"), bg='#4CAF50', fg='white',
-                                    relief='solid', bd=1, padx=30, pady=10,
+                                    font=("Segoe UI", 12, "bold"), bg='#28a745', fg='#ffffff',
+                                    relief='flat', bd=0, padx=35, pady=12,
+                                    activebackground='#218838', activeforeground='#ffffff',
+                                    cursor='hand2',
                                     command=self.start_installation)
         self.install_btn.pack(side=tk.RIGHT)
+
+        # Add hover effects
+        def on_cancel_enter(event):
+            self.cancel_btn.config(bg='#5a6268')
+        def on_cancel_leave(event):
+            self.cancel_btn.config(bg='#6c757d')
+        def on_install_enter(event):
+            self.install_btn.config(bg='#218838')
+        def on_install_leave(event):
+            self.install_btn.config(bg='#28a745')
+
+        self.cancel_btn.bind('<Enter>', on_cancel_enter)
+        self.cancel_btn.bind('<Leave>', on_cancel_leave)
+        self.install_btn.bind('<Enter>', on_install_enter)
+        self.install_btn.bind('<Leave>', on_install_leave)
         
     def update_progress(self, value, status=""):
         """Update progress bar and status"""
