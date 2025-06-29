@@ -48,6 +48,7 @@ class HackathonMonitorInstaller:
         self.progress_var = tk.DoubleVar()
         self.status_var = tk.StringVar(value="Ready to install")
         self.installing = False  # Prevent multiple installations
+        self.silent_mode = False  # Control popup suppression during installation
 
         self.setup_gui()
 
@@ -267,6 +268,19 @@ class HackathonMonitorInstaller:
 
         return subprocess.run(cmd, **kwargs)
 
+    def show_message(self, msg_type, title, message):
+        """Show message only if not in silent mode"""
+        if not self.silent_mode:
+            if msg_type == "error":
+                messagebox.showerror(title, message)
+            elif msg_type == "warning":
+                messagebox.showwarning(title, message)
+            elif msg_type == "info":
+                messagebox.showinfo(title, message)
+        else:
+            # Just print to console during silent installation
+            print(f"[{msg_type.upper()}] {title}: {message}")
+
     def update_progress(self, value, status=""):
         """Update progress bar and status"""
         try:
@@ -296,9 +310,9 @@ class HackathonMonitorInstaller:
     def request_admin_rights(self):
         """Request admin rights"""
         if not self.check_admin_rights():
-            messagebox.showwarning("Admin Rights Required", 
-                                 "This installer needs administrator rights to install to Program Files.\n\n"
-                                 "Please run this installer as Administrator.")
+            self.show_message("warning", "Admin Rights Required",
+                            "This installer needs administrator rights to install to Program Files.\n\n"
+                            "Please run this installer as Administrator.")
             return False
         return True
         
@@ -338,7 +352,7 @@ class HackathonMonitorInstaller:
                 raise Exception("Python installation failed")
                 
         except Exception as e:
-            messagebox.showerror("Error", f"Failed to install Python: {e}")
+            self.show_message("error", "Error", f"Failed to install Python: {e}")
             return False
             
     def download_application(self):
@@ -368,7 +382,7 @@ class HackathonMonitorInstaller:
                 raise Exception("Could not find extracted files")
                 
         except Exception as e:
-            messagebox.showerror("Error", f"Failed to download application: {e}")
+            self.show_message("error", "Error", f"Failed to download application: {e}")
             return False
             
     def install_application(self):
@@ -424,7 +438,7 @@ class HackathonMonitorInstaller:
             return True
             
         except Exception as e:
-            messagebox.showerror("Error", f"Failed to install application: {e}")
+            self.show_message("error", "Error", f"Failed to install application: {e}")
             return False
             
     def create_desktop_shortcut(self):
@@ -512,6 +526,7 @@ class HackathonMonitorInstaller:
             return
 
         self.installing = True
+        self.silent_mode = True  # Enable silent mode to suppress popups during installation
 
         # Disable window close button during installation
         self.root.protocol("WM_DELETE_WINDOW", lambda: None)
@@ -562,19 +577,24 @@ class HackathonMonitorInstaller:
                 else:
                     success_msg += "[+] Google Chrome detected"
                 
+                # Disable silent mode for final message
+                self.silent_mode = False
                 messagebox.showinfo("Installation Complete", success_msg)
-                
+
                 # Enable buttons
                 self.install_btn.config(state=tk.NORMAL, text="Install")
                 self.cancel_btn.config(state=tk.NORMAL, text="Close")
 
             except Exception as e:
+                # Disable silent mode for error message
+                self.silent_mode = False
                 messagebox.showerror("Installation Error", f"Installation failed: {e}")
                 self.install_btn.config(state=tk.NORMAL, text="Install")
                 self.cancel_btn.config(state=tk.NORMAL, text="Cancel")
             finally:
                 # Reset installation flag and re-enable close button
                 self.installing = False
+                self.silent_mode = False
                 self.root.protocol("WM_DELETE_WINDOW", self.root.quit)
         
         # Disable install button and update UI
