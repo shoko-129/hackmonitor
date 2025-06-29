@@ -288,13 +288,17 @@ class HackathonMonitorInstaller:
             print(f"[{msg_type.upper()}] {title}: {message}")
 
     def update_progress(self, value, status=""):
-        """Update progress bar and status"""
+        """Update progress bar and status with detailed logging"""
         try:
             self.progress_var.set(value)
             # Update window title with status for better feedback
             if status:
                 self.root.title(f"Hackathon Monitor Installer - {status}")
-                print(f"[*] Progress: {value}% - {status}")
+                print(f"[PROGRESS] {value}% - {status}")
+                print(f"[MARKER] ===== {value}% CHECKPOINT =====")
+            else:
+                print(f"[PROGRESS] {value}%")
+                print(f"[MARKER] ===== {value}% CHECKPOINT =====")
 
             # Use update_idletasks instead of update to prevent window issues
             self.root.update_idletasks()
@@ -427,18 +431,27 @@ class HackathonMonitorInstaller:
             
             # Install Python dependencies (if enabled)
             if self.python_deps_var.get():
-                self.update_progress(70, "Installing Python dependencies...")
+                print("[SUBSTEP] Installing Python dependencies...")
+                self.update_progress(60, "Installing Python dependencies...")
 
                 requirements_file = self.install_dir / "requirements_pyqt.txt"
                 if requirements_file.exists():
+                    print("[SUBSTEP] Running pip install...")
+                    self.update_progress(65, "Running pip install...")
                     cmd = [sys.executable, "-m", "pip", "install", "-r", str(requirements_file)]
                     result = self.run_subprocess_hidden(cmd, capture_output=True, text=True)
 
                     if result.returncode != 0:
+                        print("[SUBSTEP] Trying with --user flag...")
+                        self.update_progress(68, "Retrying with --user flag...")
                         # Try with --user flag
                         cmd = [sys.executable, "-m", "pip", "install", "--user", "-r", str(requirements_file)]
                         self.run_subprocess_hidden(cmd, capture_output=True, text=True)
+
+                    print("[SUBSTEP] Dependencies installation completed")
+                    self.update_progress(70, "Dependencies installation completed")
             else:
+                print("[SUBSTEP] Skipping Python dependencies...")
                 self.update_progress(70, "Skipping Python dependencies installation...")
             
             return True
@@ -550,33 +563,56 @@ class HackathonMonitorInstaller:
 
         def install_thread():
             try:
+                print("[START] Installation thread started")
+                self.update_progress(0, "Starting installation...")
+
                 # Check admin rights
+                print("[STEP] Checking admin rights...")
+                self.update_progress(10, "Checking admin rights...")
                 if not self.request_admin_rights():
                     return
-                
+
                 # Check Python
+                print("[STEP] Checking Python...")
+                self.update_progress(20, "Checking Python installation...")
                 if not self.check_python():
+                    print("[STEP] Installing Python...")
+                    self.update_progress(25, "Installing Python...")
                     if not self.install_python():
                         return
-                
+
                 # Download application
+                print("[STEP] Downloading application...")
+                self.update_progress(30, "Downloading application...")
                 if not self.download_application():
                     return
-                
+
+                print("[STEP] Extracting files...")
+                self.update_progress(40, "Extracting application files...")
+
                 # Install application
+                print("[STEP] Installing application files...")
+                self.update_progress(50, "Installing application files...")
                 if not self.install_application():
                     return
-                
+
                 # Create desktop shortcut
+                print("[STEP] Creating desktop shortcut...")
+                self.update_progress(80, "Creating desktop shortcut...")
                 self.create_desktop_shortcut()
-                
+
                 # Check Chrome
+                print("[STEP] Checking Chrome...")
+                self.update_progress(90, "Checking Google Chrome...")
                 chrome_installed = self.check_chrome()
-                
+
                 # Cleanup
+                print("[STEP] Cleaning up...")
+                self.update_progress(95, "Cleaning up temporary files...")
                 self.cleanup()
-                
+
                 # Success message
+                print("[STEP] Installation completed!")
                 self.update_progress(100, "Installation completed!")
                 
                 success_msg = "[+] Hackathon Monitor installed successfully!\n\n"
