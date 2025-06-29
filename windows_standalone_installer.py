@@ -41,20 +41,70 @@ class HackathonMonitorInstaller:
     def browse_location(self):
         """Browse for installation location"""
         try:
-            initial_dir = self.dir_var.get()
-            if not Path(initial_dir).exists():
-                initial_dir = str(Path.home())
+            import os
+            import platform
 
-            folder = filedialog.askdirectory(
-                title="Select Installation Directory",
-                initialdir=initial_dir
-            )
+            # Get current directory from entry
+            current_dir = self.dir_var.get()
+
+            # Set safe initial directory based on OS
+            if platform.system() == "Windows":
+                # Windows-specific safe directories
+                safe_dirs = [
+                    current_dir,
+                    "C:\\Program Files",
+                    "C:\\",
+                    os.path.expanduser("~\\Desktop"),
+                    os.path.expanduser("~")
+                ]
+            else:
+                # Linux/macOS safe directories
+                safe_dirs = [
+                    current_dir,
+                    os.path.expanduser("~/Desktop"),
+                    os.path.expanduser("~"),
+                    "/tmp"
+                ]
+
+            # Find first existing directory
+            initial_dir = None
+            for dir_path in safe_dirs:
+                if dir_path and os.path.exists(dir_path) and os.path.isdir(dir_path):
+                    initial_dir = dir_path
+                    break
+
+            # Open folder dialog
+            if initial_dir:
+                folder = filedialog.askdirectory(
+                    title="Select Installation Directory",
+                    initialdir=initial_dir
+                )
+            else:
+                # Fallback without initial directory
+                folder = filedialog.askdirectory(
+                    title="Select Installation Directory"
+                )
+
             if folder:
+                # Normalize path for Windows
+                if platform.system() == "Windows":
+                    folder = os.path.normpath(folder)
                 self.dir_var.set(folder)
                 print(f"✅ Selected installation directory: {folder}")
+
         except Exception as e:
             print(f"❌ Browse error: {e}")
-            messagebox.showerror("Error", f"Could not open folder browser: {e}")
+            # Last resort fallback
+            try:
+                folder = filedialog.askdirectory()
+                if folder:
+                    self.dir_var.set(folder)
+                    print(f"✅ Fallback selection: {folder}")
+            except Exception as e2:
+                print(f"❌ Fallback browse also failed: {e2}")
+                # Show user-friendly message
+                messagebox.showwarning("Browse Error",
+                    "Could not open folder browser. Please type the path manually.")
 
     def on_python_deps_change(self):
         """Handle Python dependencies checkbox change"""
@@ -465,19 +515,22 @@ class HackathonMonitorInstaller:
                 
                 # Enable buttons
                 self.install_btn.config(state=tk.NORMAL, text="Install")
-                self.cancel_btn.config(text="Close")
+                self.cancel_btn.config(state=tk.NORMAL, text="Close")
 
             except Exception as e:
                 messagebox.showerror("Installation Error", f"Installation failed: {e}")
                 self.install_btn.config(state=tk.NORMAL, text="Install")
+                self.cancel_btn.config(state=tk.NORMAL, text="Cancel")
             finally:
                 # Reset installation flag
                 self.installing = False
         
-        # Disable install button
+        # Disable install button and update UI
         self.install_btn.config(state=tk.DISABLED, text="Installing...")
-        
+        self.cancel_btn.config(state=tk.DISABLED)
+
         # Start installation in separate thread
+        import threading
         thread = threading.Thread(target=install_thread)
         thread.daemon = True
         thread.start()
@@ -489,28 +542,19 @@ class HackathonMonitorInstaller:
 def main():
     """Main function"""
     try:
-        # Ensure only one instance runs
-        root = tk.Tk()
-        root.withdraw()  # Hide the temporary root window
-
-        # Check if another instance is already running
-        try:
-            root.wm_attributes('-topmost', 1)
-            root.wm_attributes('-topmost', 0)
-        except:
-            pass
-
-        root.destroy()  # Clean up temporary window
-
-        # Create and run the installer
         installer = HackathonMonitorInstaller()
         installer.run()
-
     except Exception as e:
+        print(f"❌ Installer failed to start: {e}")
         try:
+            import tkinter as tk
+            from tkinter import messagebox
+            root = tk.Tk()
+            root.withdraw()
             messagebox.showerror("Error", f"Installer failed to start: {e}")
+            root.destroy()
         except:
-            print(f"❌ Installer failed to start: {e}")
+            pass
 
 if __name__ == "__main__":
     main()
