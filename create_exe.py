@@ -46,6 +46,8 @@ def create_exe():
             sys.executable, "-m", "PyInstaller",
             "--onefile",
             "--windowed",
+            "--clean",  # Clean cache to prevent issues
+            "--noconfirm",  # Overwrite without asking
             "--name", "HackathonMonitor_Installer"
         ] + icon_arg + ["windows_standalone_installer.py"]
         

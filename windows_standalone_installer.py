@@ -495,9 +495,13 @@ class HackathonMonitorInstaller:
         # Prevent multiple installations
         if self.installing:
             print("⚠️ Installation already in progress")
+            messagebox.showwarning("Installation in Progress", "Installation is already running. Please wait for it to complete.")
             return
 
         self.installing = True
+
+        # Disable window close button during installation
+        self.root.protocol("WM_DELETE_WINDOW", lambda: None)
 
         def install_thread():
             try:
@@ -552,8 +556,9 @@ class HackathonMonitorInstaller:
                 self.install_btn.config(state=tk.NORMAL, text="Install")
                 self.cancel_btn.config(state=tk.NORMAL, text="Cancel")
             finally:
-                # Reset installation flag
+                # Reset installation flag and re-enable close button
                 self.installing = False
+                self.root.protocol("WM_DELETE_WINDOW", self.root.quit)
         
         # Disable install button and update UI
         self.install_btn.config(state=tk.DISABLED, text="Installing...")
@@ -570,10 +575,46 @@ class HackathonMonitorInstaller:
         self.root.mainloop()
 
 def main():
-    """Main function"""
+    """Main function with EXE compatibility"""
     try:
-        installer = HackathonMonitorInstaller()
-        installer.run()
+        # Check if running as EXE (PyInstaller sets sys.frozen)
+        import sys
+        is_exe = getattr(sys, 'frozen', False)
+
+        if is_exe:
+            # Running as EXE - ensure single instance
+            import os
+            import tempfile
+
+            # Create a lock file to prevent multiple instances
+            lock_file = os.path.join(tempfile.gettempdir(), "hackathon_installer.lock")
+
+            try:
+                # Try to create lock file
+                if os.path.exists(lock_file):
+                    print("⚠️ Installer already running")
+                    return
+
+                # Create lock file
+                with open(lock_file, 'w') as f:
+                    f.write(str(os.getpid()))
+
+                # Run installer
+                installer = HackathonMonitorInstaller()
+                installer.run()
+
+            finally:
+                # Clean up lock file
+                try:
+                    if os.path.exists(lock_file):
+                        os.remove(lock_file)
+                except:
+                    pass
+        else:
+            # Running as Python script - normal behavior
+            installer = HackathonMonitorInstaller()
+            installer.run()
+
     except Exception as e:
         print(f"❌ Installer failed to start: {e}")
         try:
