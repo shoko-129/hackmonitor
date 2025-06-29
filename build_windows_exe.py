@@ -32,11 +32,11 @@ class WindowsEXEBuilder:
             exe_file.unlink()
             print(f"   Removed: {exe_file}")
         
-        print("✅ Cleanup completed")
-    
+        print("[+] Cleanup completed")
+
     def install_build_dependencies(self):
         """Install required build tools"""
-        print("📦 Installing build dependencies...")
+        print("[*] Installing build dependencies...")
 
         dependencies = [
             "pyinstaller>=5.0",
@@ -49,25 +49,25 @@ class WindowsEXEBuilder:
                 result = subprocess.run([
                     sys.executable, "-m", "pip", "install", dep
                 ], capture_output=True, text=True, check=True)
-                print(f"   ✅ {dep} installed successfully")
+                print(f"   [+] {dep} installed successfully")
             except subprocess.CalledProcessError as e:
-                print(f"   ⚠️ Failed to install {dep}: {e}")
+                print(f"   [!] Failed to install {dep}: {e}")
                 try:
                     # Try with --user flag
                     subprocess.run([
                         sys.executable, "-m", "pip", "install", "--user", dep
                     ], check=True)
-                    print(f"   ✅ {dep} installed with --user flag")
+                    print(f"   [+] {dep} installed with --user flag")
                 except subprocess.CalledProcessError:
-                    print(f"   ❌ Could not install {dep}")
+                    print(f"   [-] Could not install {dep}")
                     return False
-        
-        print("✅ Build dependencies installed")
+
+        print("[+] Build dependencies installed")
         return True
     
     def create_pyinstaller_spec(self):
         """Create PyInstaller spec file for the installer"""
-        print("📝 Creating PyInstaller spec file...")
+        print("[*] Creating PyInstaller spec file...")
         
         spec_content = f'''# -*- mode: python ; coding: utf-8 -*-
 
@@ -133,12 +133,12 @@ exe = EXE(
         with open(spec_file, 'w') as f:
             f.write(spec_content)
         
-        print(f"✅ Created spec file: {spec_file}")
+        print(f"[+] Created spec file: {spec_file}")
         return spec_file
     
     def build_exe(self):
         """Build the EXE using PyInstaller"""
-        print("🔨 Building EXE with PyInstaller...")
+        print("[*] Building EXE with PyInstaller...")
         
         spec_file = self.create_pyinstaller_spec()
         
@@ -149,7 +149,7 @@ exe = EXE(
             result = subprocess.run(cmd, cwd=self.project_dir, capture_output=True, text=True)
             
             if result.returncode == 0:
-                print("✅ EXE built successfully")
+                print("[+] EXE built successfully")
                 
                 # Move EXE to project root
                 built_exe = self.dist_dir / f"{self.exe_name.replace('.exe', '')}.exe"
@@ -157,22 +157,22 @@ exe = EXE(
                 
                 if built_exe.exists():
                     shutil.move(built_exe, final_exe)
-                    print(f"✅ EXE moved to: {final_exe}")
+                    print(f"[+] EXE moved to: {final_exe}")
                 
                 return True
             else:
-                print(f"❌ PyInstaller failed:")
+                print(f"[-] PyInstaller failed:")
                 print(f"   stdout: {result.stdout}")
                 print(f"   stderr: {result.stderr}")
                 return False
                 
         except Exception as e:
-            print(f"❌ Error running PyInstaller: {e}")
+            print(f"[-] Error running PyInstaller: {e}")
             return False
     
     def create_version_info(self):
         """Create version info file for the EXE"""
-        print("📝 Creating version info...")
+        print("[*] Creating version info...")
         
         version_content = '''# UTF-8
 #
@@ -211,12 +211,12 @@ VSVersionInfo(
         with open(version_file, 'w') as f:
             f.write(version_content)
         
-        print(f"✅ Created version info: {version_file}")
+        print(f"[+] Created version info: {version_file}")
         return version_file
     
     def build_complete_installer(self):
         """Build the complete installer EXE"""
-        print("🚀 Building Complete Windows Installer EXE")
+        print("[*] Building Complete Windows Installer EXE")
         print("=" * 60)
         
         # Step 1: Clean previous builds
@@ -224,7 +224,7 @@ VSVersionInfo(
         
         # Step 2: Install build dependencies
         if not self.install_build_dependencies():
-            print("❌ Failed to install build dependencies")
+            print("[-] Failed to install build dependencies")
             return False
         
         # Step 3: Create version info
@@ -232,20 +232,20 @@ VSVersionInfo(
         
         # Step 4: Build EXE
         if not self.build_exe():
-            print("❌ Failed to build EXE")
+            print("[-] Failed to build EXE")
             return False
         
-        print("✅ Windows installer EXE creation completed!")
+        print("[+] Windows installer EXE creation completed!")
         return True
 
 def main():
     """Main execution function"""
-    print("🪟 Hackathon Monitor Windows EXE Builder")
+    print("[*] Hackathon Monitor Windows EXE Builder")
     print("=" * 60)
     
     if sys.platform != "win32":
-        print("⚠️ This EXE builder is designed for Windows")
-        print("📋 Please run this on a Windows system")
+        print("[!] This EXE builder is designed for Windows")
+        print("[*] Please run this on a Windows system")
         return
     
     builder = WindowsEXEBuilder()
@@ -254,18 +254,18 @@ def main():
         success = builder.build_complete_installer()
         
         if success:
-            print("\n🎉 SUCCESS!")
+            print("\n[+] SUCCESS!")
             print("=" * 60)
-            print("✅ Windows installer EXE has been created")
-            print(f"📦 File: {builder.exe_name}")
-            print(f"📍 Location: {builder.project_dir}")
-            print("\n🚀 Distribution Instructions:")
+            print("[+] Windows installer EXE has been created")
+            print(f"[*] File: {builder.exe_name}")
+            print(f"[*] Location: {builder.project_dir}")
+            print("\n[*] Distribution Instructions:")
             print(f"1. Share the file: {builder.exe_name}")
             print("2. Users double-click to install")
             print("3. Installer downloads everything automatically")
             print("4. Creates desktop shortcut")
             print("5. Checks for Chrome installation")
-            print("\n📋 Features:")
+            print("\n[*] Features:")
             print("• Downloads latest version from GitHub")
             print("• Installs Python if needed")
             print("• Installs all dependencies")
@@ -274,13 +274,13 @@ def main():
             print("• Professional GUI installer")
             
         else:
-            print("\n❌ FAILED!")
+            print("\n[-] FAILED!")
             print("Could not create EXE. Check the error messages above.")
             
     except KeyboardInterrupt:
-        print("\n⚠️ Build cancelled by user")
+        print("\n[!] Build cancelled by user")
     except Exception as e:
-        print(f"\n❌ Unexpected error: {e}")
+        print(f"\n[-] Unexpected error: {e}")
         import traceback
         traceback.print_exc()
 

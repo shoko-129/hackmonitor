@@ -62,37 +62,37 @@ class HackathonMonitorInstaller:
                 import os
                 folder = os.path.normpath(folder)
                 self.dir_var.set(folder)
-                print(f"✅ Selected installation directory: {folder}")
+                print(f"[+] Selected installation directory: {folder}")
             else:
-                print("ℹ️ No folder selected")
+                print("[i] No folder selected")
 
         except Exception as e:
-            print(f"❌ Browse error: {e}")
+            print(f"[-] Browse error: {e}")
             # Try even simpler approach
             try:
                 import tkinter.filedialog as fd
                 folder = fd.askdirectory()
                 if folder:
                     self.dir_var.set(folder)
-                    print(f"✅ Simple browse success: {folder}")
+                    print(f"[+] Simple browse success: {folder}")
             except Exception as e2:
-                print(f"❌ Simple browse failed: {e2}")
+                print(f"[-] Simple browse failed: {e2}")
                 messagebox.showinfo("Browse Not Available",
                     "Folder browser is not available.\n\nPlease type the installation path manually in the text box above.\n\nExample: C:\\Program Files\\Hackathon Monitor")
 
     def on_python_deps_change(self):
         """Handle Python dependencies checkbox change"""
         if self.python_deps_var.get():
-            print("✅ Python dependencies will be installed automatically")
+            print("[+] Python dependencies will be installed automatically")
         else:
-            print("⚠️ Python dependencies installation disabled")
+            print("[!] Python dependencies installation disabled")
 
     def on_shortcut_change(self):
         """Handle desktop shortcut checkbox change"""
         if self.desktop_shortcut_var.get():
-            print("✅ Desktop shortcut will be created")
+            print("[+] Desktop shortcut will be created")
         else:
-            print("⚠️ Desktop shortcut creation disabled")
+            print("[!] Desktop shortcut creation disabled")
 
     def setup_gui(self):
         """Setup the installer GUI with enhanced styling"""
@@ -262,13 +262,13 @@ class HackathonMonitorInstaller:
             # Update window title with status for better feedback
             if status:
                 self.root.title(f"Hackathon Monitor Installer - {status}")
-                print(f"📊 Progress: {value}% - {status}")
+                print(f"[*] Progress: {value}% - {status}")
 
             # Use update_idletasks instead of update to prevent window issues
             self.root.update_idletasks()
 
         except Exception as e:
-            print(f"⚠️ Progress update error: {e}")
+            print(f"[!] Progress update error: {e}")
         
     def check_admin_rights(self):
         """Check if running with admin rights"""
@@ -494,7 +494,7 @@ class HackathonMonitorInstaller:
         """Start the installation process"""
         # Prevent multiple installations
         if self.installing:
-            print("⚠️ Installation already in progress")
+            print("[!] Installation already in progress")
             messagebox.showwarning("Installation in Progress", "Installation is already running. Please wait for it to complete.")
             return
 
@@ -534,16 +534,16 @@ class HackathonMonitorInstaller:
                 # Success message
                 self.update_progress(100, "Installation completed!")
                 
-                success_msg = "✅ Hackathon Monitor installed successfully!\n\n"
-                success_msg += f"📍 Installed to: {self.install_dir}\n"
-                success_msg += "🖥️ Desktop shortcut created\n\n"
-                
+                success_msg = "[+] Hackathon Monitor installed successfully!\n\n"
+                success_msg += f"[*] Installed to: {self.install_dir}\n"
+                success_msg += "[*] Desktop shortcut created\n\n"
+
                 if not chrome_installed:
-                    success_msg += "⚠️ Google Chrome is not installed\n"
-                    success_msg += "📥 Please install Chrome for web scraping:\n"
+                    success_msg += "[!] Google Chrome is not installed\n"
+                    success_msg += "[*] Please install Chrome for web scraping:\n"
                     success_msg += "https://www.google.com/chrome/"
                 else:
-                    success_msg += "✅ Google Chrome detected"
+                    success_msg += "[+] Google Chrome detected"
                 
                 messagebox.showinfo("Installation Complete", success_msg)
                 
@@ -592,7 +592,7 @@ def main():
             try:
                 # Try to create lock file
                 if os.path.exists(lock_file):
-                    print("⚠️ Installer already running")
+                    print("[!] Installer already running")
                     return
 
                 # Create lock file
@@ -616,7 +616,7 @@ def main():
             installer.run()
 
     except Exception as e:
-        print(f"❌ Installer failed to start: {e}")
+        print(f"[-] Installer failed to start: {e}")
         try:
             import tkinter as tk
             from tkinter import messagebox
