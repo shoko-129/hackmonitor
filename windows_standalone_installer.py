@@ -34,14 +34,27 @@ class HackathonMonitorInstaller:
         # Variables
         self.progress_var = tk.DoubleVar()
         self.status_var = tk.StringVar(value="Ready to install")
-        
+        self.installing = False  # Prevent multiple installations
+
         self.setup_gui()
 
     def browse_location(self):
         """Browse for installation location"""
-        folder = filedialog.askdirectory(initialdir=self.dir_var.get())
-        if folder:
-            self.dir_var.set(folder)
+        try:
+            initial_dir = self.dir_var.get()
+            if not Path(initial_dir).exists():
+                initial_dir = str(Path.home())
+
+            folder = filedialog.askdirectory(
+                title="Select Installation Directory",
+                initialdir=initial_dir
+            )
+            if folder:
+                self.dir_var.set(folder)
+                print(f"✅ Selected installation directory: {folder}")
+        except Exception as e:
+            print(f"❌ Browse error: {e}")
+            messagebox.showerror("Error", f"Could not open folder browser: {e}")
 
     def on_python_deps_change(self):
         """Handle Python dependencies checkbox change"""
@@ -162,11 +175,20 @@ class HackathonMonitorInstaller:
                                     command=self.start_installation)
         self.install_btn.pack(side=tk.RIGHT)
         
-    def update_progress(self, value, status):
+    def update_progress(self, value, status=""):
         """Update progress bar and status"""
-        self.progress_var.set(value)
-        self.status_var.set(status)
-        self.root.update()
+        try:
+            self.progress_var.set(value)
+            # Update window title with status for better feedback
+            if status:
+                self.root.title(f"Hackathon Monitor Installer - {status}")
+                print(f"📊 Progress: {value}% - {status}")
+
+            # Use update_idletasks instead of update to prevent window issues
+            self.root.update_idletasks()
+
+        except Exception as e:
+            print(f"⚠️ Progress update error: {e}")
         
     def check_admin_rights(self):
         """Check if running with admin rights"""
@@ -390,6 +412,13 @@ class HackathonMonitorInstaller:
             
     def start_installation(self):
         """Start the installation process"""
+        # Prevent multiple installations
+        if self.installing:
+            print("⚠️ Installation already in progress")
+            return
+
+        self.installing = True
+
         def install_thread():
             try:
                 # Check admin rights
@@ -437,10 +466,13 @@ class HackathonMonitorInstaller:
                 # Enable buttons
                 self.install_btn.config(state=tk.NORMAL, text="Install")
                 self.cancel_btn.config(text="Close")
-                
+
             except Exception as e:
                 messagebox.showerror("Installation Error", f"Installation failed: {e}")
                 self.install_btn.config(state=tk.NORMAL, text="Install")
+            finally:
+                # Reset installation flag
+                self.installing = False
         
         # Disable install button
         self.install_btn.config(state=tk.DISABLED, text="Installing...")
@@ -457,10 +489,28 @@ class HackathonMonitorInstaller:
 def main():
     """Main function"""
     try:
+        # Ensure only one instance runs
+        root = tk.Tk()
+        root.withdraw()  # Hide the temporary root window
+
+        # Check if another instance is already running
+        try:
+            root.wm_attributes('-topmost', 1)
+            root.wm_attributes('-topmost', 0)
+        except:
+            pass
+
+        root.destroy()  # Clean up temporary window
+
+        # Create and run the installer
         installer = HackathonMonitorInstaller()
         installer.run()
+
     except Exception as e:
-        messagebox.showerror("Error", f"Installer failed to start: {e}")
+        try:
+            messagebox.showerror("Error", f"Installer failed to start: {e}")
+        except:
+            print(f"❌ Installer failed to start: {e}")
 
 if __name__ == "__main__":
     main()
