@@ -206,7 +206,12 @@ class HackathonMonitorInstaller:
         # Progress bar with modern styling
         self.progress_bar = ttk.Progressbar(content_frame, variable=self.progress_var,
                                            maximum=100, style='Modern.Horizontal.TProgressbar')
-        self.progress_bar.pack(fill=tk.X, pady=(0, 25), ipady=10)
+        self.progress_bar.pack(fill=tk.X, pady=(0, 5), ipady=10)
+
+        # Progress percentage and status label
+        self.progress_status_label = tk.Label(content_frame, text="0% - Ready to install",
+                                             font=("Arial", 10), bg='#f8f9fa', fg='#6c757d')
+        self.progress_status_label.pack(anchor=tk.W, pady=(5, 20))
 
         # Configure modern progress bar style
         style = ttk.Style()
@@ -291,12 +296,17 @@ class HackathonMonitorInstaller:
         """Update progress bar and status with detailed logging"""
         try:
             self.progress_var.set(value)
-            # Update window title with status for better feedback
+
+            # Update progress status label with percentage and status
             if status:
+                progress_text = f"{value}% - {status}"
+                self.progress_status_label.config(text=progress_text)
                 self.root.title(f"Hackathon Monitor Installer - {status}")
                 print(f"[PROGRESS] {value}% - {status}")
                 print(f"[MARKER] ===== {value}% CHECKPOINT =====")
             else:
+                progress_text = f"{value}%"
+                self.progress_status_label.config(text=progress_text)
                 print(f"[PROGRESS] {value}%")
                 print(f"[MARKER] ===== {value}% CHECKPOINT =====")
 
