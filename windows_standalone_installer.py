@@ -78,8 +78,7 @@ class HackathonMonitorInstaller:
                     print(f"[+] Simple browse success: {folder}")
             except Exception as e2:
                 print(f"[-] Simple browse failed: {e2}")
-                messagebox.showinfo("Browse Not Available",
-                    "Folder browser is not available.\n\nPlease type the installation path manually in the text box above.\n\nExample: C:\\Program Files\\Hackathon Monitor")
+                print("[!] Folder browser not available - please type path manually")
 
     def on_python_deps_change(self):
         """Handle Python dependencies checkbox change"""
@@ -260,11 +259,18 @@ class HackathonMonitorInstaller:
         """Run subprocess with hidden window on Windows"""
         # Suppress any popup windows during subprocess
         startupinfo = None
+        creationflags = 0
+
         if sys.platform == "win32":
             startupinfo = subprocess.STARTUPINFO()
             startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
             startupinfo.wShowWindow = subprocess.SW_HIDE
+
+            # Additional flags to suppress system dialogs
+            creationflags = subprocess.CREATE_NO_WINDOW
+
             kwargs['startupinfo'] = startupinfo
+            kwargs['creationflags'] = creationflags
 
         return subprocess.run(cmd, **kwargs)
 
@@ -522,11 +528,18 @@ class HackathonMonitorInstaller:
         # Prevent multiple installations
         if self.installing:
             print("[!] Installation already in progress")
-            messagebox.showwarning("Installation in Progress", "Installation is already running. Please wait for it to complete.")
             return
 
         self.installing = True
         self.silent_mode = True  # Enable silent mode to suppress popups during installation
+
+        # Completely disable all messageboxes during installation
+        self.original_messagebox = messagebox
+        messagebox.showinfo = lambda *args, **kwargs: None
+        messagebox.showwarning = lambda *args, **kwargs: None
+        messagebox.showerror = lambda *args, **kwargs: None
+        messagebox.askquestion = lambda *args, **kwargs: 'yes'
+        messagebox.askyesno = lambda *args, **kwargs: True
 
         # Disable window close button during installation
         self.root.protocol("WM_DELETE_WINDOW", lambda: None)
@@ -577,8 +590,14 @@ class HackathonMonitorInstaller:
                 else:
                     success_msg += "[+] Google Chrome detected"
                 
-                # Disable silent mode for final message
+                # Restore messagebox functionality and show final message
                 self.silent_mode = False
+                messagebox.showinfo = self.original_messagebox.showinfo
+                messagebox.showwarning = self.original_messagebox.showwarning
+                messagebox.showerror = self.original_messagebox.showerror
+                messagebox.askquestion = self.original_messagebox.askquestion
+                messagebox.askyesno = self.original_messagebox.askyesno
+
                 messagebox.showinfo("Installation Complete", success_msg)
 
                 # Enable buttons
@@ -586,8 +605,14 @@ class HackathonMonitorInstaller:
                 self.cancel_btn.config(state=tk.NORMAL, text="Close")
 
             except Exception as e:
-                # Disable silent mode for error message
+                # Restore messagebox functionality for error message
                 self.silent_mode = False
+                messagebox.showinfo = self.original_messagebox.showinfo
+                messagebox.showwarning = self.original_messagebox.showwarning
+                messagebox.showerror = self.original_messagebox.showerror
+                messagebox.askquestion = self.original_messagebox.askquestion
+                messagebox.askyesno = self.original_messagebox.askyesno
+
                 messagebox.showerror("Installation Error", f"Installation failed: {e}")
                 self.install_btn.config(state=tk.NORMAL, text="Install")
                 self.cancel_btn.config(state=tk.NORMAL, text="Cancel")
@@ -595,6 +620,17 @@ class HackathonMonitorInstaller:
                 # Reset installation flag and re-enable close button
                 self.installing = False
                 self.silent_mode = False
+
+                # Restore messagebox functionality if not already done
+                try:
+                    messagebox.showinfo = self.original_messagebox.showinfo
+                    messagebox.showwarning = self.original_messagebox.showwarning
+                    messagebox.showerror = self.original_messagebox.showerror
+                    messagebox.askquestion = self.original_messagebox.askquestion
+                    messagebox.askyesno = self.original_messagebox.askyesno
+                except:
+                    pass
+
                 self.root.protocol("WM_DELETE_WINDOW", self.root.quit)
         
         # Disable install button and update UI
