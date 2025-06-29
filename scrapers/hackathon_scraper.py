@@ -26,7 +26,7 @@ class HackathonScraper:
         })
 
     def get_webdriver(self):
-        """Get a configured Chrome WebDriver with fallback to sample data"""
+        """Get a configured Chrome WebDriver"""
         try:
             self.logger.info("🔍 Initializing Chrome WebDriver...")
 
@@ -53,16 +53,35 @@ class HackathonScraper:
             return driver
 
         except Exception as e:
-            self.logger.warning(f"⚠️ Could not initialize Chrome WebDriver: {e}")
-            self.logger.info("📋 Will use sample data instead")
-            return None
+            self.logger.error(f"❌ Chrome WebDriver initialization failed: {e}")
+            self.logger.error("❌ Chrome browser is not installed or not accessible")
+            self.logger.error("📥 Please install Google Chrome browser to enable web scraping")
+            self.logger.error("🔗 Download from: https://www.google.com/chrome/")
+            raise Exception("Chrome browser not installed. Please install Google Chrome to use web scraping features.")
 
 
+
+    def check_chrome_availability(self):
+        """Check if Chrome is available for web scraping"""
+        try:
+            self.get_webdriver()
+            return True
+        except Exception as e:
+            self.logger.error("❌ Chrome browser is not installed or accessible")
+            self.logger.error("📥 Please install Google Chrome to enable web scraping")
+            self.logger.error("🔗 Download from: https://www.google.com/chrome/")
+            return False
 
     def scrape_all_platforms(self, config, existing_hackathons=None):
         """Scrape MLH and Devpost platforms for upcoming hackathons"""
         if existing_hackathons is None:
             existing_hackathons = []
+
+        # Check Chrome availability first
+        if not self.check_chrome_availability():
+            self.logger.error("❌ Cannot perform web scraping without Chrome browser")
+            self.logger.error("📋 Returning empty results - please install Chrome to get hackathon data")
+            return []
 
         all_hackathons = []
         existing_names = {h.get('name', '').lower() for h in existing_hackathons}
@@ -100,10 +119,11 @@ class HackathonScraper:
             url = "https://mlh.io/seasons/2025/events"
             self.logger.info(f"Scraping MLH: {url}")
 
-            driver = self.get_webdriver()
-            if not driver:
-                self.logger.error("Could not initialize WebDriver for MLH")
-                return self.create_sample_hackathons('MLH')
+            try:
+                driver = self.get_webdriver()
+            except Exception as e:
+                self.logger.error("❌ Cannot scrape MLH: Chrome browser not installed")
+                return []
 
             driver.get(url)
             time.sleep(5)  # Wait for page to load
@@ -152,7 +172,10 @@ class HackathonScraper:
 
         except Exception as e:
             self.logger.error(f"Error scraping MLH: {e}")
-            hackathons = self.create_sample_hackathons('MLH')
+            if "Chrome browser not installed" in str(e):
+                hackathons = []
+            else:
+                hackathons = []
 
         finally:
             if driver:
@@ -277,10 +300,11 @@ class HackathonScraper:
             url = "https://devpost.com/hackathons?challenge_type[]=online&open_to[]=public&order_by=prize-amount&status[]=upcoming&status[]=open"
             self.logger.info(f"Scraping Devpost: {url}")
 
-            driver = self.get_webdriver()
-            if not driver:
-                self.logger.error("Could not initialize WebDriver for Devpost")
-                return self.create_sample_devpost_hackathons()
+            try:
+                driver = self.get_webdriver()
+            except Exception as e:
+                self.logger.error("❌ Cannot scrape Devpost: Chrome browser not installed")
+                return []
 
             driver.get(url)
             time.sleep(5)  # Wait for page to load
@@ -314,7 +338,7 @@ class HackathonScraper:
 
         except Exception as e:
             self.logger.error(f"Error scraping Devpost: {e}")
-            return self.create_sample_devpost_hackathons()
+            return []
 
         finally:
             if driver:
@@ -411,53 +435,7 @@ class HackathonScraper:
             self.logger.error(f"Error parsing Devpost hackathon: {e}")
             return None
 
-    def create_sample_devpost_hackathons(self):
-        """Create sample Devpost hackathons"""
-        self.logger.info("Creating sample Devpost hackathons")
 
-        from datetime import datetime, timedelta
-
-        sample_hackathons = [
-            {
-                'name': 'World\'s Largest Hackathon presented by Bolt',
-                'link': 'https://worldslargesthackathon.devpost.com/?ref_feature=challenge&ref_medium=discover',
-                'days_left': '2 days left',
-                'submission_period': 'May 30 - Jun 30, 2025',
-                'tags': 'Beginner Friendly, Low/No Code, Machine Learning/AI',
-                'prize': '$1,037,500 in prizes'
-            },
-            {
-                'name': 'Meta Horizon Creator Competition: Elevate Your Mobile World',
-                'link': 'https://mhcp-mobile-update-competition.devpost.com/?ref_feature=challenge&ref_medium=discover',
-                'days_left': '24 days left',
-                'submission_period': 'Jul 1 - Jul 25, 2025',
-                'tags': 'VR/AR, Mobile, Creative',
-                'prize': '$1,000,000 in prizes'
-            }
-        ]
-
-        hackathons = []
-        for sample in sample_hackathons:
-            # Use submission period as main date if available
-            date_info = sample.get('submission_period', sample['days_left'])
-
-            hackathon = {
-                'name': sample['name'],
-                'platform': 'Devpost',
-                'link': sample['link'],
-                'date': date_info,
-                'days_left': sample['days_left'],
-                'submission_period': sample.get('submission_period', ''),
-                'tags': sample['tags'],
-                'prize': sample['prize'],
-                'location': 'Online',
-                'event_type': 'Online',
-                'scraped_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            }
-            hackathons.append(hackathon)
-
-        self.logger.info(f"Created {len(hackathons)} sample Devpost hackathons")
-        return hackathons
 
     def scrape_unstop(self):
         """Scrape Unstop for upcoming unpaid hackathons"""
@@ -468,10 +446,11 @@ class HackathonScraper:
             url = "https://unstop.com/hackathons?payment=unpaid&oppstatus=open"
             self.logger.info(f"Scraping Unstop: {url}")
 
-            driver = self.get_webdriver()
-            if not driver:
-                self.logger.error("Could not initialize WebDriver for Unstop")
-                return self.create_sample_unstop_hackathons()
+            try:
+                driver = self.get_webdriver()
+            except Exception as e:
+                self.logger.error("❌ Cannot scrape Unstop: Chrome browser not installed")
+                return []
 
             driver.get(url)
             time.sleep(5)  # Wait for page to load
@@ -505,7 +484,7 @@ class HackathonScraper:
 
         except Exception as e:
             self.logger.error(f"Error scraping Unstop: {e}")
-            return self.create_sample_unstop_hackathons()
+            return []
 
         finally:
             if driver:
@@ -603,108 +582,5 @@ class HackathonScraper:
             self.logger.error(f"Error parsing Unstop hackathon: {e}")
             return None
 
-    def create_sample_unstop_hackathons(self):
-        """Create sample Unstop hackathons"""
-        self.logger.info("Creating sample Unstop hackathons")
 
-        sample_hackathons = [
-            {
-                'name': 'AMD AI Sprint - Hackathon',
-                'link': 'https://unstop.com/hackathons/1506226',
-                'days_left': '4 days left',
-                'prize': '₹6,00,000'
-            },
-            {
-                'name': 'Odoo Hackathon 2025',
-                'link': 'https://unstop.com/hackathons/1464473',
-                'days_left': '2 days left',
-                'prize': '₹3,00,000'
-            }
-        ]
 
-        hackathons = []
-        for sample in sample_hackathons:
-            hackathon = {
-                'name': sample['name'],
-                'platform': 'Unstop',
-                'link': sample['link'],
-                'date': sample['days_left'],
-                'days_left': sample['days_left'],
-                'prize': sample['prize'],
-                'location': 'Online',
-                'event_type': 'Hackathon',
-                'tags': 'Hackathon',
-                'scraped_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            }
-            hackathons.append(hackathon)
-
-        self.logger.info(f"Created {len(hackathons)} sample Unstop hackathons")
-        return hackathons
-
-    def create_sample_hackathons(self, platform):
-        """Create sample MLH Digital Only hackathons based on actual HTML structure"""
-        self.logger.info(f"Creating sample MLH Digital Only hackathons")
-
-        # Generate upcoming Digital Only events with future dates
-        from datetime import datetime, timedelta
-
-        # Calculate future dates
-        today = datetime.now()
-        future_date_1 = today + timedelta(days=30)
-        future_date_2 = today + timedelta(days=60)
-        future_date_3 = today + timedelta(days=90)
-
-        # Use the actual MLH Digital Only events from the real HTML structure
-        mlh_digital_hackathons = [
-            {
-                'name': 'Global Hack Week: Season Launch',
-                'link': 'https://events.mlh.io/events/12490-global-hack-week-season-launch',
-                'date': 'Jul 4th - 10th',
-                'start_date': '2025-07-04',
-                'end_date': '2025-07-10',
-                'event_type': 'Digital Only'
-            },
-            {
-                'name': 'Data Hackfest',
-                'link': 'https://events.mlh.io/events/12536',
-                'date': 'Jul 25th - 27th',
-                'start_date': '2025-07-25',
-                'end_date': '2025-07-27',
-                'event_type': 'Digital Only'
-            }
-        ]
-
-        hackathons = []
-        for sample in mlh_digital_hackathons:
-            # Calculate days left for sample data
-            days_left = ''
-            if sample['start_date']:
-                try:
-                    event_start = datetime.fromisoformat(sample['start_date'])
-                    current_time = datetime.now()
-                    days_diff = (event_start.date() - current_time.date()).days
-                    if days_diff > 0:
-                        days_left = f"{days_diff} days left"
-                    elif days_diff == 0:
-                        days_left = "Today"
-                    else:
-                        days_left = "Started"
-                except:
-                    days_left = "Date TBD"
-
-            hackathon = {
-                'name': sample['name'],
-                'platform': 'MLH',
-                'link': sample['link'],
-                'date': sample['date'],
-                'days_left': days_left,
-                'start_date': sample['start_date'],
-                'end_date': sample['end_date'],
-                'event_type': sample['event_type'],
-                'location': 'Everywhere, Online',
-                'scraped_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            }
-            hackathons.append(hackathon)
-
-        self.logger.info(f"Created {len(hackathons)} sample MLH Digital Only hackathons")
-        return hackathons
