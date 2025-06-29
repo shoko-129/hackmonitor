@@ -261,7 +261,7 @@ class HackathonMonitorInstaller:
         self.install_btn.bind('<Leave>', on_install_leave)
         
     def run_subprocess_hidden(self, cmd, **kwargs):
-        """Run subprocess with hidden window on Windows"""
+        """Run subprocess with maximum window suppression"""
         # Suppress any popup windows during subprocess
         startupinfo = None
         creationflags = 0
@@ -271,13 +271,36 @@ class HackathonMonitorInstaller:
             startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
             startupinfo.wShowWindow = subprocess.SW_HIDE
 
-            # Additional flags to suppress system dialogs
-            creationflags = subprocess.CREATE_NO_WINDOW
+            # Maximum suppression flags
+            creationflags = (subprocess.CREATE_NO_WINDOW |
+                           subprocess.CREATE_NEW_PROCESS_GROUP)
 
             kwargs['startupinfo'] = startupinfo
             kwargs['creationflags'] = creationflags
 
+        # Set environment variables to suppress pip prompts
+        env = kwargs.get('env', os.environ.copy())
+        env['PYTHONIOENCODING'] = 'utf-8'
+        env['PIP_NO_INPUT'] = '1'
+        env['PIP_QUIET'] = '1'
+        env['PIP_DISABLE_PIP_VERSION_CHECK'] = '1'
+        kwargs['env'] = env
+
         return subprocess.run(cmd, **kwargs)
+
+    def run_pip_silent(self, pip_args):
+        """Run pip with maximum silence and suppression"""
+        # Build pip command with all suppression flags
+        cmd = [sys.executable, "-m", "pip"] + pip_args + [
+            "-q",  # Quiet mode
+            "--no-warn-script-location",  # No script warnings
+            "--disable-pip-version-check",  # No version check
+            "--no-input",  # No interactive prompts
+            "--exists-action", "i"  # Ignore if already exists
+        ]
+
+        # Run with maximum suppression
+        return self.run_subprocess_hidden(cmd, capture_output=True, text=True)
 
     def show_message(self, msg_type, title, message):
         """Show message only if not in silent mode"""
@@ -448,15 +471,15 @@ class HackathonMonitorInstaller:
                 if requirements_file.exists():
                     print("[SUBSTEP] Running pip install...")
                     self.update_progress(65, "Running pip install...")
-                    cmd = [sys.executable, "-m", "pip", "install", "-r", str(requirements_file)]
-                    result = self.run_subprocess_hidden(cmd, capture_output=True, text=True)
+
+                    # Use maximum silent pip installation
+                    result = self.run_pip_silent(["install", "-r", str(requirements_file)])
 
                     if result.returncode != 0:
                         print("[SUBSTEP] Trying with --user flag...")
                         self.update_progress(68, "Retrying with --user flag...")
                         # Try with --user flag
-                        cmd = [sys.executable, "-m", "pip", "install", "--user", "-r", str(requirements_file)]
-                        self.run_subprocess_hidden(cmd, capture_output=True, text=True)
+                        self.run_pip_silent(["install", "--user", "-r", str(requirements_file)])
 
                     print("[SUBSTEP] Dependencies installation completed")
                     self.update_progress(70, "Dependencies installation completed")
