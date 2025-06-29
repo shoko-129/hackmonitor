@@ -28,7 +28,7 @@ class HackathonMonitorInstaller:
         # Create GUI
         self.root = tk.Tk()
         self.root.title("Hackathon Monitor Installer")
-        self.root.geometry("500x400")
+        self.root.geometry("600x650")
         self.root.resizable(False, False)
         
         # Variables
@@ -36,64 +36,131 @@ class HackathonMonitorInstaller:
         self.status_var = tk.StringVar(value="Ready to install")
         
         self.setup_gui()
-        
-    def setup_gui(self):
-        """Setup the installer GUI"""
-        # Title
-        title_label = tk.Label(self.root, text="🎯 Hackathon Monitor Installer", 
-                              font=("Arial", 16, "bold"))
-        title_label.pack(pady=20)
-        
-        # Description
-        desc_text = """Professional Hackathon Monitoring Application
 
-This installer will:
-• Download the latest version from GitHub
-• Install Python dependencies automatically
-• Create desktop shortcut
-• Check for Google Chrome
-• Set up the complete application"""
-        
-        desc_label = tk.Label(self.root, text=desc_text, justify=tk.LEFT)
-        desc_label.pack(pady=10, padx=20)
-        
-        # Installation directory
-        dir_frame = tk.Frame(self.root)
-        dir_frame.pack(pady=10, padx=20, fill=tk.X)
-        
-        tk.Label(dir_frame, text="Install to:").pack(anchor=tk.W)
+    def browse_location(self):
+        """Browse for installation location"""
+        folder = filedialog.askdirectory(initialdir=self.dir_var.get())
+        if folder:
+            self.dir_var.set(folder)
+
+    def on_python_deps_change(self):
+        """Handle Python dependencies checkbox change"""
+        if self.python_deps_var.get():
+            print("✅ Python dependencies will be installed automatically")
+        else:
+            print("⚠️ Python dependencies installation disabled")
+
+    def on_shortcut_change(self):
+        """Handle desktop shortcut checkbox change"""
+        if self.desktop_shortcut_var.get():
+            print("✅ Desktop shortcut will be created")
+        else:
+            print("⚠️ Desktop shortcut creation disabled")
+
+    def setup_gui(self):
+        """Setup the installer GUI to match the design"""
+        # Configure main window
+        self.root.configure(bg='#f0f0f0')
+
+        # Header with version
+        header_frame = tk.Frame(self.root, bg='#e8e8e8', height=60)
+        header_frame.pack(fill=tk.X, padx=0, pady=0)
+        header_frame.pack_propagate(False)
+
+        version_label = tk.Label(header_frame, text="Hackathon_monitor v1.0.0",
+                                font=("Segoe UI", 11), bg='#e8e8e8', fg='#333333')
+        version_label.pack(anchor=tk.W, padx=20, pady=20)
+
+        # Main content frame
+        content_frame = tk.Frame(self.root, bg='#f0f0f0')
+        content_frame.pack(fill=tk.BOTH, expand=True, padx=30, pady=20)
+
+        # Title
+        title_label = tk.Label(content_frame, text="Hackathon monitor installer",
+                              font=("Segoe UI", 18, "bold"), bg='#f0f0f0', fg='#000000')
+        title_label.pack(anchor=tk.W, pady=(0, 30))
+
+        # Checkboxes frame
+        checkbox_frame = tk.Frame(content_frame, bg='#f0f0f0')
+        checkbox_frame.pack(fill=tk.X, pady=(0, 30))
+
+        # Python Dependencies checkbox
+        self.python_deps_var = tk.BooleanVar(value=True)
+        python_checkbox = tk.Checkbutton(checkbox_frame,
+                                        text="Python Dependencies automatically",
+                                        variable=self.python_deps_var,
+                                        font=("Segoe UI", 11),
+                                        bg='#f0f0f0', fg='#000000',
+                                        activebackground='#f0f0f0',
+                                        selectcolor='white',
+                                        command=self.on_python_deps_change)
+        python_checkbox.pack(anchor=tk.W, pady=5)
+
+        # Desktop Shortcut checkbox
+        self.desktop_shortcut_var = tk.BooleanVar(value=True)
+        shortcut_checkbox = tk.Checkbutton(checkbox_frame,
+                                          text="Create desktop Shortcut",
+                                          variable=self.desktop_shortcut_var,
+                                          font=("Segoe UI", 11),
+                                          bg='#f0f0f0', fg='#000000',
+                                          activebackground='#f0f0f0',
+                                          selectcolor='white',
+                                          command=self.on_shortcut_change)
+        shortcut_checkbox.pack(anchor=tk.W, pady=5)
+
+        # Location section
+        location_frame = tk.Frame(content_frame, bg='#f0f0f0')
+        location_frame.pack(fill=tk.X, pady=(20, 0))
+
+        location_label = tk.Label(location_frame, text="Location :",
+                                 font=("Segoe UI", 11), bg='#f0f0f0', fg='#000000')
+        location_label.pack(anchor=tk.W, pady=(0, 5))
+
+        # Location entry and browse button
+        location_entry_frame = tk.Frame(location_frame, bg='#f0f0f0')
+        location_entry_frame.pack(fill=tk.X, pady=(0, 20))
+
         self.dir_var = tk.StringVar(value=str(self.install_dir))
-        dir_entry = tk.Entry(dir_frame, textvariable=self.dir_var, width=60)
-        dir_entry.pack(fill=tk.X, pady=5)
-        
+        location_entry = tk.Entry(location_entry_frame, textvariable=self.dir_var,
+                                 font=("Segoe UI", 10), bg='white', relief='solid', bd=1)
+        location_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, ipady=8)
+
+        browse_btn = tk.Button(location_entry_frame, text="browse",
+                              font=("Segoe UI", 10), bg='#e0e0e0', relief='solid', bd=1,
+                              padx=20, pady=8, command=self.browse_location)
+        browse_btn.pack(side=tk.RIGHT, padx=(10, 0))
+
+        # Process section
+        process_label = tk.Label(content_frame, text="Process :",
+                                font=("Segoe UI", 11), bg='#f0f0f0', fg='#000000')
+        process_label.pack(anchor=tk.W, pady=(10, 5))
+
         # Progress bar
-        progress_frame = tk.Frame(self.root)
-        progress_frame.pack(pady=20, padx=20, fill=tk.X)
-        
-        tk.Label(progress_frame, text="Progress:").pack(anchor=tk.W)
-        self.progress_bar = ttk.Progressbar(progress_frame, variable=self.progress_var, 
-                                           maximum=100)
-        self.progress_bar.pack(fill=tk.X, pady=5)
-        
-        # Status label
-        self.status_label = tk.Label(progress_frame, textvariable=self.status_var)
-        self.status_label.pack(anchor=tk.W, pady=5)
-        
-        # Buttons
-        button_frame = tk.Frame(self.root)
-        button_frame.pack(pady=20)
-        
-        self.install_btn = tk.Button(button_frame, text="Install", 
-                                    command=self.start_installation,
-                                    bg="#4CAF50", fg="white", 
-                                    font=("Arial", 12, "bold"),
-                                    padx=30, pady=10)
-        self.install_btn.pack(side=tk.LEFT, padx=10)
-        
-        self.cancel_btn = tk.Button(button_frame, text="Cancel", 
-                                   command=self.root.quit,
-                                   padx=30, pady=10)
-        self.cancel_btn.pack(side=tk.LEFT, padx=10)
+        self.progress_bar = ttk.Progressbar(content_frame, variable=self.progress_var,
+                                           maximum=100, style='Custom.Horizontal.TProgressbar')
+        self.progress_bar.pack(fill=tk.X, pady=(0, 20), ipady=8)
+
+        # Configure progress bar style
+        style = ttk.Style()
+        style.configure('Custom.Horizontal.TProgressbar', background='#4CAF50')
+
+        # Buttons frame
+        button_frame = tk.Frame(self.root, bg='#f0f0f0')
+        button_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=30, pady=20)
+
+        # Cancel button
+        self.cancel_btn = tk.Button(button_frame, text="Cancel",
+                                   font=("Segoe UI", 11), bg='#d0d0d0', fg='#000000',
+                                   relief='solid', bd=1, padx=30, pady=10,
+                                   command=self.root.quit)
+        self.cancel_btn.pack(side=tk.RIGHT, padx=(10, 0))
+
+        # Install button
+        self.install_btn = tk.Button(button_frame, text="Install",
+                                    font=("Segoe UI", 11, "bold"), bg='#4CAF50', fg='white',
+                                    relief='solid', bd=1, padx=30, pady=10,
+                                    command=self.start_installation)
+        self.install_btn.pack(side=tk.RIGHT)
         
     def update_progress(self, value, status):
         """Update progress bar and status"""
@@ -223,18 +290,21 @@ This installer will:
                     else:
                         shutil.copy2(src, dst)
             
-            self.update_progress(70, "Installing Python dependencies...")
-            
-            # Install Python dependencies
-            requirements_file = self.install_dir / "requirements_pyqt.txt"
-            if requirements_file.exists():
-                cmd = [sys.executable, "-m", "pip", "install", "-r", str(requirements_file)]
-                result = subprocess.run(cmd, capture_output=True, text=True)
-                
-                if result.returncode != 0:
-                    # Try with --user flag
-                    cmd = [sys.executable, "-m", "pip", "install", "--user", "-r", str(requirements_file)]
-                    subprocess.run(cmd, capture_output=True, text=True)
+            # Install Python dependencies (if enabled)
+            if self.python_deps_var.get():
+                self.update_progress(70, "Installing Python dependencies...")
+
+                requirements_file = self.install_dir / "requirements_pyqt.txt"
+                if requirements_file.exists():
+                    cmd = [sys.executable, "-m", "pip", "install", "-r", str(requirements_file)]
+                    result = subprocess.run(cmd, capture_output=True, text=True)
+
+                    if result.returncode != 0:
+                        # Try with --user flag
+                        cmd = [sys.executable, "-m", "pip", "install", "--user", "-r", str(requirements_file)]
+                        subprocess.run(cmd, capture_output=True, text=True)
+            else:
+                self.update_progress(70, "Skipping Python dependencies installation...")
             
             return True
             
@@ -244,8 +314,12 @@ This installer will:
             
     def create_desktop_shortcut(self):
         """Create desktop shortcut"""
+        if not self.desktop_shortcut_var.get():
+            self.update_progress(80, "Skipping desktop shortcut creation...")
+            return True
+
         self.update_progress(80, "Creating desktop shortcut...")
-        
+
         try:
             import win32com.client
             
