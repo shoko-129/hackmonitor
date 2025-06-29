@@ -255,6 +255,18 @@ class HackathonMonitorInstaller:
         self.install_btn.bind('<Enter>', on_install_enter)
         self.install_btn.bind('<Leave>', on_install_leave)
         
+    def run_subprocess_hidden(self, cmd, **kwargs):
+        """Run subprocess with hidden window on Windows"""
+        # Suppress any popup windows during subprocess
+        startupinfo = None
+        if sys.platform == "win32":
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            startupinfo.wShowWindow = subprocess.SW_HIDE
+            kwargs['startupinfo'] = startupinfo
+
+        return subprocess.run(cmd, **kwargs)
+
     def update_progress(self, value, status=""):
         """Update progress bar and status"""
         try:
@@ -293,8 +305,8 @@ class HackathonMonitorInstaller:
     def check_python(self):
         """Check if Python is installed"""
         try:
-            result = subprocess.run([sys.executable, "--version"], 
-                                  capture_output=True, text=True)
+            result = self.run_subprocess_hidden([sys.executable, "--version"],
+                                               capture_output=True, text=True)
             if result.returncode == 0:
                 return True
         except:
@@ -313,10 +325,11 @@ class HackathonMonitorInstaller:
             
             self.update_progress(20, "Installing Python...")
             
-            # Install Python silently
-            cmd = [str(python_installer), "/quiet", "InstallAllUsers=1", 
+            # Install Python silently with window suppression
+            cmd = [str(python_installer), "/quiet", "InstallAllUsers=1",
                    "PrependPath=1", "Include_test=0"]
-            result = subprocess.run(cmd, capture_output=True)
+
+            result = self.run_subprocess_hidden(cmd, capture_output=True)
             
             if result.returncode == 0:
                 self.update_progress(30, "Python installed successfully")
@@ -399,12 +412,12 @@ class HackathonMonitorInstaller:
                 requirements_file = self.install_dir / "requirements_pyqt.txt"
                 if requirements_file.exists():
                     cmd = [sys.executable, "-m", "pip", "install", "-r", str(requirements_file)]
-                    result = subprocess.run(cmd, capture_output=True, text=True)
+                    result = self.run_subprocess_hidden(cmd, capture_output=True, text=True)
 
                     if result.returncode != 0:
                         # Try with --user flag
                         cmd = [sys.executable, "-m", "pip", "install", "--user", "-r", str(requirements_file)]
-                        subprocess.run(cmd, capture_output=True, text=True)
+                        self.run_subprocess_hidden(cmd, capture_output=True, text=True)
             else:
                 self.update_progress(70, "Skipping Python dependencies installation...")
             
@@ -502,6 +515,10 @@ class HackathonMonitorInstaller:
 
         # Disable window close button during installation
         self.root.protocol("WM_DELETE_WINDOW", lambda: None)
+
+        # Keep installer window focused and on top during installation
+        self.root.focus_force()
+        self.root.lift()
 
         def install_thread():
             try:
