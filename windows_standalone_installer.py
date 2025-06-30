@@ -496,15 +496,23 @@ class HackathonMonitorInstaller:
     def create_launcher_script(self):
         """Create a simple launcher script for the application"""
         try:
-            # Create a simple Windows launcher script
+            # Create a simple Windows launcher script that hides terminal
             launcher_path = self.install_dir / "Launch Hackathon Monitor.bat"
 
             with open(launcher_path, 'w') as f:
                 f.write('@echo off\n')
                 f.write(f'cd /d "{self.install_dir}"\n')
-                f.write(f'python hackathon_monitor_pyqt.py\n')
+                f.write('start /min python hackathon_monitor_pyqt.py\n')
 
-            print("[+] Created simple launcher script")
+            # Also create a VBS script for completely hidden execution
+            vbs_launcher_path = self.install_dir / "Launch Hackathon Monitor.vbs"
+
+            with open(vbs_launcher_path, 'w') as f:
+                f.write('Set WshShell = CreateObject("WScript.Shell")\n')
+                f.write(f'WshShell.CurrentDirectory = "{self.install_dir}"\n')
+                f.write('WshShell.Run "python hackathon_monitor_pyqt.py", 0, False\n')
+
+            print("[+] Created launcher script (hidden terminal)")
             return True
 
         except Exception as e:
@@ -530,9 +538,9 @@ class HackathonMonitorInstaller:
                 shell = win32com.client.Dispatch("WScript.Shell")
                 shortcut = shell.CreateShortCut(str(shortcut_path))
 
-                # Point to the launcher script for better user experience
-                launcher_script = self.install_dir / "Launch Hackathon Monitor.bat"
-                shortcut.Targetpath = str(launcher_script)
+                # Point to the VBS script for completely hidden execution
+                vbs_launcher = self.install_dir / "Launch Hackathon Monitor.vbs"
+                shortcut.Targetpath = str(vbs_launcher)
                 shortcut.WorkingDirectory = str(self.install_dir)
 
                 # Set icon if available
@@ -548,11 +556,11 @@ class HackathonMonitorInstaller:
                 # Method 2: Use PowerShell to create .lnk file
                 print("[*] win32com not available, using PowerShell...")
 
-                launcher_script = self.install_dir / "Launch Hackathon Monitor.bat"
+                vbs_launcher = self.install_dir / "Launch Hackathon Monitor.vbs"
                 powershell_script = f'''
 $WshShell = New-Object -comObject WScript.Shell
 $Shortcut = $WshShell.CreateShortcut("{shortcut_path}")
-$Shortcut.TargetPath = "{launcher_script}"
+$Shortcut.TargetPath = "{vbs_launcher}"
 $Shortcut.WorkingDirectory = "{self.install_dir}"
 $Shortcut.Save()
 '''
@@ -578,7 +586,7 @@ $Shortcut.Save()
                 with open(batch_file, 'w') as f:
                     f.write('@echo off\n')
                     f.write(f'cd /d "{self.install_dir}"\n')
-                    f.write('python hackathon_monitor_pyqt.py\n')
+                    f.write('start /min python hackathon_monitor_pyqt.py\n')
 
                 print("[+] Created .bat shortcut as fallback")
                 return True
