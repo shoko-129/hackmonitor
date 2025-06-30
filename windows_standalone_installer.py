@@ -496,23 +496,23 @@ class HackathonMonitorInstaller:
     def create_launcher_script(self):
         """Create a simple launcher script for the application"""
         try:
-            # Create a simple Windows launcher script that hides terminal
+            # Create a simple Windows launcher script using pythonw (no console window)
             launcher_path = self.install_dir / "Launch Hackathon Monitor.bat"
 
             with open(launcher_path, 'w') as f:
                 f.write('@echo off\n')
                 f.write(f'cd /d "{self.install_dir}"\n')
-                f.write('start /min python hackathon_monitor_pyqt.py\n')
+                f.write('pythonw hackathon_monitor_pyqt.py\n')
 
-            # Also create a VBS script for completely hidden execution
+            # Create a VBS script as alternative (also no console window)
             vbs_launcher_path = self.install_dir / "Launch Hackathon Monitor.vbs"
 
             with open(vbs_launcher_path, 'w') as f:
                 f.write('Set WshShell = CreateObject("WScript.Shell")\n')
                 f.write(f'WshShell.CurrentDirectory = "{self.install_dir}"\n')
-                f.write('WshShell.Run "python hackathon_monitor_pyqt.py", 0, False\n')
+                f.write('WshShell.Run "pythonw hackathon_monitor_pyqt.py", 0, False\n')
 
-            print("[+] Created launcher script (hidden terminal)")
+            print("[+] Created launcher script (no console window, normal GUI)")
             return True
 
         except Exception as e:
@@ -586,7 +586,7 @@ $Shortcut.Save()
                 with open(batch_file, 'w') as f:
                     f.write('@echo off\n')
                     f.write(f'cd /d "{self.install_dir}"\n')
-                    f.write('start /min python hackathon_monitor_pyqt.py\n')
+                    f.write('pythonw hackathon_monitor_pyqt.py\n')
 
                 print("[+] Created .bat shortcut as fallback")
                 return True
