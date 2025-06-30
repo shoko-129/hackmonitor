@@ -499,11 +499,32 @@ class HackathonMonitorInstaller:
             # Create VBS script for completely hidden execution (primary launcher)
             vbs_launcher_path = self.install_dir / "Launch Hackathon Monitor.vbs"
 
+            # Get the actual Python executable path
+            python_exe = sys.executable
+            pythonw_exe = python_exe.replace('python.exe', 'pythonw.exe')
+
             with open(vbs_launcher_path, 'w') as f:
+                f.write('On Error Resume Next\n')
+                f.write('Dim objShell, strCommand\n')
+                f.write('Set objShell = CreateObject("WScript.Shell")\n')
+                f.write(f'objShell.CurrentDirectory = "{self.install_dir}"\n')
+                f.write(f'strCommand = "\\"{pythonw_exe}\\" hackathon_monitor_pyqt.py"\n')
+                f.write('objShell.Run strCommand, 0, False\n')
+                f.write('If Err.Number <> 0 Then\n')
+                f.write(f'    strCommand = "\\"{python_exe}\\" hackathon_monitor_pyqt.py"\n')
+                f.write('    objShell.Run strCommand, 0, False\n')
+                f.write('End If\n')
+                f.write('Set objShell = Nothing\n')
+
+            # Also create a debug VBS to test if it works
+            debug_vbs_path = self.install_dir / "Test Launch.vbs"
+
+            with open(debug_vbs_path, 'w') as f:
+                f.write('On Error Resume Next\n')
                 f.write('Dim objShell\n')
                 f.write('Set objShell = CreateObject("WScript.Shell")\n')
                 f.write(f'objShell.CurrentDirectory = "{self.install_dir}"\n')
-                f.write('objShell.Run "pythonw.exe hackathon_monitor_pyqt.py", 0, False\n')
+                f.write('objShell.Run "python hackathon_monitor_pyqt.py", 1, False\n')
                 f.write('Set objShell = Nothing\n')
 
             # Create PowerShell script as alternative
@@ -522,7 +543,27 @@ class HackathonMonitorInstaller:
                 f.write('pythonw hackathon_monitor_pyqt.py\n')
                 f.write('exit\n')
 
-            print("[+] Created VBS launcher (completely hidden terminal)")
+            # Create a simple test batch file to verify paths
+            test_bat_path = self.install_dir / "Test Launch.bat"
+
+            with open(test_bat_path, 'w') as f:
+                f.write('@echo off\n')
+                f.write('echo Testing launcher paths...\n')
+                f.write(f'echo Current directory: {self.install_dir}\n')
+                f.write(f'cd /d "{self.install_dir}"\n')
+                f.write('echo Files in directory:\n')
+                f.write('dir *.py\n')
+                f.write('echo.\n')
+                f.write('echo Python path:\n')
+                f.write('where python\n')
+                f.write('where pythonw\n')
+                f.write('echo.\n')
+                f.write('echo Press any key to test launch...\n')
+                f.write('pause\n')
+                f.write('pythonw hackathon_monitor_pyqt.py\n')
+                f.write('pause\n')
+
+            print("[+] Created VBS launcher and test files")
             return True
 
         except Exception as e:
