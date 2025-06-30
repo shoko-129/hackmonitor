@@ -494,25 +494,35 @@ class HackathonMonitorInstaller:
             return False
 
     def create_launcher_script(self):
-        """Create a simple launcher script for the application"""
+        """Create a launcher script that completely hides terminal"""
         try:
-            # Create a simple Windows launcher script using pythonw (no console window)
+            # Create VBS script for completely hidden execution (primary launcher)
+            vbs_launcher_path = self.install_dir / "Launch Hackathon Monitor.vbs"
+
+            with open(vbs_launcher_path, 'w') as f:
+                f.write('Dim objShell\n')
+                f.write('Set objShell = CreateObject("WScript.Shell")\n')
+                f.write(f'objShell.CurrentDirectory = "{self.install_dir}"\n')
+                f.write('objShell.Run "pythonw.exe hackathon_monitor_pyqt.py", 0, False\n')
+                f.write('Set objShell = Nothing\n')
+
+            # Create PowerShell script as alternative
+            ps1_launcher_path = self.install_dir / "Launch Hackathon Monitor.ps1"
+
+            with open(ps1_launcher_path, 'w') as f:
+                f.write(f'Set-Location "{self.install_dir}"\n')
+                f.write('Start-Process "pythonw.exe" -ArgumentList "hackathon_monitor_pyqt.py" -WindowStyle Hidden\n')
+
+            # Create batch file as backup (but VBS is preferred)
             launcher_path = self.install_dir / "Launch Hackathon Monitor.bat"
 
             with open(launcher_path, 'w') as f:
                 f.write('@echo off\n')
                 f.write(f'cd /d "{self.install_dir}"\n')
                 f.write('pythonw hackathon_monitor_pyqt.py\n')
+                f.write('exit\n')
 
-            # Create a VBS script as alternative (also no console window)
-            vbs_launcher_path = self.install_dir / "Launch Hackathon Monitor.vbs"
-
-            with open(vbs_launcher_path, 'w') as f:
-                f.write('Set WshShell = CreateObject("WScript.Shell")\n')
-                f.write(f'WshShell.CurrentDirectory = "{self.install_dir}"\n')
-                f.write('WshShell.Run "pythonw hackathon_monitor_pyqt.py", 0, False\n')
-
-            print("[+] Created launcher script (no console window, normal GUI)")
+            print("[+] Created VBS launcher (completely hidden terminal)")
             return True
 
         except Exception as e:
@@ -540,7 +550,8 @@ class HackathonMonitorInstaller:
 
                 # Point to the VBS script for completely hidden execution
                 vbs_launcher = self.install_dir / "Launch Hackathon Monitor.vbs"
-                shortcut.Targetpath = str(vbs_launcher)
+                shortcut.Targetpath = "wscript.exe"
+                shortcut.Arguments = f'"{vbs_launcher}"'
                 shortcut.WorkingDirectory = str(self.install_dir)
 
                 # Set icon if available
@@ -560,7 +571,8 @@ class HackathonMonitorInstaller:
                 powershell_script = f'''
 $WshShell = New-Object -comObject WScript.Shell
 $Shortcut = $WshShell.CreateShortcut("{shortcut_path}")
-$Shortcut.TargetPath = "{vbs_launcher}"
+$Shortcut.TargetPath = "wscript.exe"
+$Shortcut.Arguments = '"{vbs_launcher}"'
 $Shortcut.WorkingDirectory = "{self.install_dir}"
 $Shortcut.Save()
 '''
