@@ -494,67 +494,70 @@ class HackathonMonitorInstaller:
             return False
 
     def create_launcher_script(self):
-        """Create a launcher script that completely hides terminal"""
+        """Create a reliable launcher script"""
         try:
-            # Create VBS script for completely hidden execution (primary launcher)
-            vbs_launcher_path = self.install_dir / "Launch Hackathon Monitor.vbs"
-
-            # Get the actual Python executable path
+            # Get Python executable paths
             python_exe = sys.executable
             pythonw_exe = python_exe.replace('python.exe', 'pythonw.exe')
 
-            # Create a simple, working VBS script
-            with open(vbs_launcher_path, 'w') as f:
-                f.write('Set objShell = CreateObject("WScript.Shell")\n')
-                f.write(f'objShell.CurrentDirectory = "{self.install_dir}"\n')
-                f.write('objShell.Run "pythonw hackathon_monitor_pyqt.py", 0\n')
-
-            # Also create a debug VBS to test if it works
-            debug_vbs_path = self.install_dir / "Test Launch.vbs"
-
-            # Create a simple debug VBS script
-            with open(debug_vbs_path, 'w') as f:
-                f.write('Set objShell = CreateObject("WScript.Shell")\n')
-                f.write(f'objShell.CurrentDirectory = "{self.install_dir}"\n')
-                f.write('objShell.Run "python hackathon_monitor_pyqt.py", 1\n')
-
-            # Create PowerShell script as alternative
-            ps1_launcher_path = self.install_dir / "Launch Hackathon Monitor.ps1"
-
-            with open(ps1_launcher_path, 'w') as f:
-                f.write(f'Set-Location "{self.install_dir}"\n')
-                f.write('Start-Process "pythonw.exe" -ArgumentList "hackathon_monitor_pyqt.py" -WindowStyle Hidden\n')
-
-            # Create batch file as backup (but VBS is preferred)
+            # Create a batch file with process checking to prevent multiple instances
             launcher_path = self.install_dir / "Launch Hackathon Monitor.bat"
 
             with open(launcher_path, 'w') as f:
                 f.write('@echo off\n')
+                f.write('REM Check if hackathon_monitor_pyqt.py is already running\n')
+                f.write('tasklist /FI "IMAGENAME eq pythonw.exe" /FI "WINDOWTITLE eq hackathon*" >nul 2>&1\n')
+                f.write('if %ERRORLEVEL% EQU 0 (\n')
+                f.write('    echo Hackathon Monitor is already running.\n')
+                f.write('    timeout /t 2 >nul\n')
+                f.write('    exit /b\n')
+                f.write(')\n')
+                f.write('\n')
                 f.write(f'cd /d "{self.install_dir}"\n')
-                f.write('pythonw hackathon_monitor_pyqt.py\n')
-                f.write('exit\n')
+                f.write(f'start "" "{pythonw_exe}" hackathon_monitor_pyqt.py\n')
 
-            # Create a simple test batch file to verify paths
-            test_bat_path = self.install_dir / "Test Launch.bat"
+            # Create a simple Python launcher script (most reliable)
+            py_launcher_path = self.install_dir / "launch_app.py"
 
-            with open(test_bat_path, 'w') as f:
-                f.write('@echo off\n')
-                f.write('echo Testing launcher paths...\n')
-                f.write(f'echo Current directory: {self.install_dir}\n')
-                f.write(f'cd /d "{self.install_dir}"\n')
-                f.write('echo Files in directory:\n')
-                f.write('dir *.py\n')
-                f.write('echo.\n')
-                f.write('echo Python path:\n')
-                f.write('where python\n')
-                f.write('where pythonw\n')
-                f.write('echo.\n')
-                f.write('echo Press any key to test launch...\n')
-                f.write('pause\n')
-                f.write('pythonw hackathon_monitor_pyqt.py\n')
-                f.write('pause\n')
+            with open(py_launcher_path, 'w') as f:
+                f.write('#!/usr/bin/env python3\n')
+                f.write('import os\n')
+                f.write('import sys\n')
+                f.write('import subprocess\n')
+                f.write('\n')
+                f.write('def is_app_running():\n')
+                f.write('    """Check if hackathon_monitor_pyqt.py is already running using tasklist"""\n')
+                f.write('    try:\n')
+                f.write('        result = subprocess.run(["tasklist", "/FI", "IMAGENAME eq pythonw.exe"], \n')
+                f.write('                               capture_output=True, text=True)\n')
+                f.write('        return "hackathon_monitor_pyqt.py" in result.stdout\n')
+                f.write('    except:\n')
+                f.write('        return False\n')
+                f.write('\n')
+                f.write('def main():\n')
+                f.write('    if is_app_running():\n')
+                f.write('        print("Hackathon Monitor is already running.")\n')
+                f.write('        return\n')
+                f.write('    \n')
+                f.write(f'    os.chdir(r"{self.install_dir}")\n')
+                f.write('    \n')
+                f.write('    # Use pythonw to hide console window\n')
+                f.write(f'    pythonw_exe = r"{pythonw_exe}"\n')
+                f.write('    subprocess.Popen([pythonw_exe, "hackathon_monitor_pyqt.py"], \n')
+                f.write('                     creationflags=subprocess.CREATE_NO_WINDOW)\n')
+                f.write('\n')
+                f.write('if __name__ == "__main__":\n')
+                f.write('    main()\n')
 
-            print("[+] Created VBS launcher and test files")
+            # Create VBS script that calls the Python launcher
+            vbs_launcher_path = self.install_dir / "Launch Hackathon Monitor.vbs"
+
+            with open(vbs_launcher_path, 'w') as f:
+                f.write('Set objShell = CreateObject("WScript.Shell")\n')
+                f.write(f'objShell.CurrentDirectory = "{self.install_dir}"\n')
+                f.write(f'objShell.Run "\\"{pythonw_exe}\\" launch_app.py", 0\n')
+
+            print("[+] Created reliable launcher with process checking")
             return True
 
         except Exception as e:
