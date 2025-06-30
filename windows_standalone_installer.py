@@ -503,29 +503,20 @@ class HackathonMonitorInstaller:
             python_exe = sys.executable
             pythonw_exe = python_exe.replace('python.exe', 'pythonw.exe')
 
+            # Create a simple, working VBS script
             with open(vbs_launcher_path, 'w') as f:
-                f.write('On Error Resume Next\n')
-                f.write('Dim objShell, strCommand\n')
                 f.write('Set objShell = CreateObject("WScript.Shell")\n')
                 f.write(f'objShell.CurrentDirectory = "{self.install_dir}"\n')
-                f.write(f'strCommand = "\\"{pythonw_exe}\\" hackathon_monitor_pyqt.py"\n')
-                f.write('objShell.Run strCommand, 0, False\n')
-                f.write('If Err.Number <> 0 Then\n')
-                f.write(f'    strCommand = "\\"{python_exe}\\" hackathon_monitor_pyqt.py"\n')
-                f.write('    objShell.Run strCommand, 0, False\n')
-                f.write('End If\n')
-                f.write('Set objShell = Nothing\n')
+                f.write('objShell.Run "pythonw hackathon_monitor_pyqt.py", 0\n')
 
             # Also create a debug VBS to test if it works
             debug_vbs_path = self.install_dir / "Test Launch.vbs"
 
+            # Create a simple debug VBS script
             with open(debug_vbs_path, 'w') as f:
-                f.write('On Error Resume Next\n')
-                f.write('Dim objShell\n')
                 f.write('Set objShell = CreateObject("WScript.Shell")\n')
                 f.write(f'objShell.CurrentDirectory = "{self.install_dir}"\n')
-                f.write('objShell.Run "python hackathon_monitor_pyqt.py", 1, False\n')
-                f.write('Set objShell = Nothing\n')
+                f.write('objShell.Run "python hackathon_monitor_pyqt.py", 1\n')
 
             # Create PowerShell script as alternative
             ps1_launcher_path = self.install_dir / "Launch Hackathon Monitor.ps1"
