@@ -496,17 +496,49 @@ class HackathonMonitorInstaller:
     def create_launcher_script(self):
         """Create a proper launcher script for the application"""
         try:
-            # Create a Windows launcher script
+            # Create a Windows launcher script that points to the main app
             launcher_path = self.install_dir / "Launch Hackathon Monitor.bat"
+
+            # Debug: List all Python files in installation directory
+            print(f"[DEBUG] Checking installation directory: {self.install_dir}")
+            python_files = list(self.install_dir.glob("*.py"))
+            print(f"[DEBUG] Found Python files: {[f.name for f in python_files]}")
+
+            # Find the main application file
+            main_app_file = None
+            possible_names = [
+                "hackathon_monitor_pyqt.py",
+                "hackathon_monitor.py",
+                "main.py",
+                "app.py"
+            ]
+
+            for app_name in possible_names:
+                app_path = self.install_dir / app_name
+                if app_path.exists():
+                    main_app_file = app_name
+                    print(f"[DEBUG] Found main app file: {main_app_file}")
+                    break
+
+            if not main_app_file:
+                # Default to the expected main file
+                main_app_file = "hackathon_monitor_pyqt.py"
+                print(f"[DEBUG] Using default main app file: {main_app_file}")
 
             with open(launcher_path, 'w') as f:
                 f.write('@echo off\n')
                 f.write('title Hackathon Monitor\n')
                 f.write(f'cd /d "{self.install_dir}"\n')
-                f.write(f'"{sys.executable}" hackathon_monitor_pyqt.py\n')
-                f.write('if errorlevel 1 pause\n')
+                f.write(f'echo Starting Hackathon Monitor...\n')
+                f.write(f'"{sys.executable}" "{main_app_file}"\n')
+                f.write('if errorlevel 1 (\n')
+                f.write('    echo.\n')
+                f.write('    echo Error: Failed to start Hackathon Monitor\n')
+                f.write('    echo Press any key to close...\n')
+                f.write('    pause >nul\n')
+                f.write(')\n')
 
-            print("[+] Created launcher script")
+            print(f"[+] Created launcher script pointing to: {main_app_file}")
             return True
 
         except Exception as e:
@@ -577,11 +609,20 @@ $Shortcut.Save()
                 desktop = Path.home() / "Desktop"
                 batch_file = desktop / "Hackathon Monitor.bat"
 
+                # Find the main application file
+                main_app_file = "hackathon_monitor_pyqt.py"
+                for app_name in ["hackathon_monitor_pyqt.py", "hackathon_monitor.py", "main.py"]:
+                    if (self.install_dir / app_name).exists():
+                        main_app_file = app_name
+                        break
+
                 with open(batch_file, 'w') as f:
                     f.write('@echo off\n')
+                    f.write('title Hackathon Monitor\n')
                     f.write(f'cd /d "{self.install_dir}"\n')
-                    f.write(f'"{sys.executable}" hackathon_monitor_pyqt.py\n')
-                    f.write('pause\n')
+                    f.write(f'echo Starting Hackathon Monitor...\n')
+                    f.write(f'"{sys.executable}" "{main_app_file}"\n')
+                    f.write('if errorlevel 1 pause\n')
 
                 print("[+] Created .bat shortcut as fallback")
                 return True
